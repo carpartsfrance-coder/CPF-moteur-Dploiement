@@ -1,0 +1,112 @@
+{
+  "7e612693-cd8f-4b3f-a3cc-e59152c39192": [
+    {
+      "id": "8094d065-e715-4d1c-8ae2-bb431114ecb6",
+      "channel": "email",
+      "kind": "admin-email",
+      "fromName": "Car Parts France Pro",
+      "fromEmail": "support@mail.carpartsfrance.fr",
+      "subject": "Réponse à votre devis - Car Parts France Pro [#7e612693-cd8f-4b3f-a3cc-e59152c39192]",
+      "message": "Bonjour f,\n\nMerci d'avoir contacté CAR PARTS FRANCE concernant votre demande.\n\nVoici notre proposition personnalisée ci-dessous.\n\nN’hésitez pas à revenir vers moi pour confirmer ce devis ou pour toute question complémentaire.\n\nBien cordialement Killian,\nCAR PARTS FRANCE",
+      "createdAt": "2025-10-05T13:06:34.214Z"
+    },
+    {
+      "id": "d051b63a-1759-48ae-90e5-44d7566c235c",
+      "channel": "client",
+      "kind": "client-message",
+      "fromName": "kilian",
+      "fromEmail": "killian.belabbes@gmail.com",
+      "message": "kok",
+      "createdAt": "2025-10-05T13:13:14.709Z"
+    },
+    {
+      "id": "902a2df8-a34f-4b93-ab4f-adef8f3ecb4a",
+      "channel": "email",
+      "kind": "admin-email",
+      "fromName": "Car Parts France Pro",
+      "fromEmail": "support@mail.carpartsfrance.fr",
+      "subject": "Réponse à votre devis - Car Parts France Pro [#7e612693-cd8f-4b3f-a3cc-e59152c39192]",
+      "message": "Bonjour f,\n\nMerci d'avoir contacté CAR PARTS FRANCE concernant votre demande.\n\nVoici notre proposition personnalisée ci-dessous.\n\nN’hésitez pas à revenir vers moi pour confirmer ce devis ou pour toute question complémentaire.\n\nBien cordialement Killian,\nCAR PARTS FRANCE",
+      "createdAt": "2025-10-05T13:21:32.042Z"
+    },
+    {
+      "id": "04640770-ac9a-4dc2-a6b3-118b478054b8",
+      "channel": "client",
+      "kind": "client-message",
+      "fromName": "f,f",
+      "fromEmail": "killian.belabbes@gmail.com,killian.belabbes@gmail.com",
+      "message": "Ok jaccepte",
+      "createdAt": "2025-10-05T13:22:25.275Z"
+    },
+    {
+      "id": "f2b7fb2c-cf99-480f-8b69-0a190d97fa0e",
+      "channel": "email",
+      "kind": "admin-email",
+      "fromName": "Car Parts France Pro",
+      "fromEmail": "support@mail.carpartsfrance.fr",
+      "subject": "Réponse à votre devis - Car Parts France Pro [#7e612693-cd8f-4b3f-a3cc-e59152c39192]",
+      "message": "Bonjour f,\n\nVoici. lerib en PJ ",
+      "createdAt": "2025-10-05T13:22:48.426Z"
+    },
+    {
+      "id": "9718a64d-f43d-4d5d-b8b0-83a51b194281",
+      "channel": "email",
+      "kind": "admin-email",
+      "fromName": "Car Parts France Pro",
+      "fromEmail": "support@mail.carpartsfrance.fr",
+      "subject": "Réponse à votre devis - Car Parts France Pro [#7e612693-cd8f-4b3f-a3cc-e59152c39192]",
+      "message": "Bonjour f,\n\nMerci d'avoir contacté CAR PARTS FRANCE concernant votre demande.\n\nVoici notre proposition personnalisée ci-dessous.\n\nN’hésitez pas à revenir vers moi pour confirmer ce devis ou pour toute question complémentaire.\n\nBien cordialement Killian,\nCAR PARTS FRANCE",
+      "createdAt": "2025-10-05T13:32:13.717Z"
+    }
+  ],
+  "__meta": {
+    "1eccc3e1-7b92-45fa-95cc-ee625e67e654": {
+      "toEmail": "killian.belabbes@gmail.com",
+      "toName": "Killian belabbes",
+      "subject": "Réponse à votre devis - Car Parts France Pro [#1eccc3e1-7b92-45fa-95cc-ee625e67e654]",
+      "createdAt": "2025-10-05T13:56:14.310Z",
+      "details": {
+        "items": [],
+        "testsPerformed": []
+      },
+      "websiteUrl": "",
+      "companyName": "Car Parts France Pro",
+      "logoUrl": ""
+    }
+  },
+  "1eccc3e1-7b92-45fa-95cc-ee625e67e654": [
+    {
+      "id": "4f5876fa-fbcf-48b2-9ff6-b7d41cb24362",
+      "channel": "email",
+      "kind": "admin-email",
+      "fromName": "Car Parts France Pro",
+      "fromEmail": "support@mail.carpartsfrance.fr",
+      "subject": "Réponse à votre devis - Car Parts France Pro [#1eccc3e1-7b92-45fa-95cc-ee625e67e654]",
+      "message": "Bonjour Killian belabbes,\n\nMerci d'avoir contacté CAR PARTS FRANCE concernant votre demande.\n\nVoici notre proposition personnalisée ci-dessous.\n\nN’hésitez pas à revenir vers moi pour confirmer ce devis ou pour toute question complémentaire.\n\nBien cordialement Killian,\nCAR PARTS FRANCE",
+      "createdAt": "2025-10-05T13:44:14.535Z"
+    },
+    {
+      "id": "c776c711-9d28-4236-a69f-39e6bf89ce8b",
+      "channel": "email",
+      "kind": "admin-email",
+      "fromName": "Car Parts France Pro",
+      "fromEmail": "support@mail.carpartsfrance.fr",
+      "subject": "Réponse à votre devis - Car Parts France Pro [#1eccc3e1-7b92-45fa-95cc-ee625e67e654]",
+      "message": "Bonjour Killian belabbes,\n\nMerci d'avoir contacté CAR PARTS FRANCE concernant votre demande.\n\nVoici notre proposition personnalisée ci-dessous.\n\nN’hésitez pas à revenir vers moi pour confirmer ce devis ou pour toute question complémentaire.\n\nBien cordialement Killian,\nCAR PARTS FRANCE",
+      "createdAt": "2025-10-05T13:56:14.686Z"
+    }
+  ],
+  "__motors": [
+    {
+      "id": "6f57ecbb-a014-435e-95e6-9aa7a2a1d74f",
+      "name": "Moteur Porsche Cayenne Turbo",
+      "price": "4900",
+      "displacement": "4.5",
+      "power": "450",
+      "warranty": "1 an",
+      "brand": "Porsche ",
+      "model": "Cayenne Turbo",
+      "year": "2055"
+    }
+  ]
+}

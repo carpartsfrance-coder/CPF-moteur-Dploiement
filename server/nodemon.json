@@ -1,0 +1,13 @@
+{
+  "watch": ["."],
+  "ignore": [
+    "data/**",
+    "server/data/**",
+    "node_modules/**",
+    ".git/**"
+  ],
+  "ext": "js,mjs,cjs",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
