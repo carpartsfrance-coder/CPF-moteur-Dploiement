@@ -9,7 +9,9 @@ import buildReplyEmailHtml from './emailTemplate.js';
 import path from 'path';
 import fs from 'fs';
 import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
-import sharp from 'sharp';
+ 
+let __sharp = null;
+async function getSharp() { if (__sharp) return __sharp; const m = await import('sharp'); __sharp = m.default || m; return __sharp; }
 
 const app = express();
 // En production (Railway), utiliser PORT. En local, rester sur 3001 par défaut.
@@ -98,6 +100,7 @@ if (GALLERY_DIR) {
       const rs = fs.createReadStream(filePath);
       res.setHeader('Content-Type', 'image/webp');
       rs.on('error', () => res.status(404).end());
+      const sharp = await getSharp();
       rs.pipe(sharp().webp({ quality: 82 })).on('error', () => res.status(500).end()).pipe(res);
     } catch (e) {
       console.error('[gallery-opt] error', e);
@@ -149,12 +152,13 @@ app.get('/gallery-file/:id', async (req, res) => {
     const stream = galleryBucket.openDownloadStream(id);
     let originalCt = 'application/octet-stream';
     let transformed = false;
-    stream.on('file', (file) => {
+    stream.on('file', async (file) => {
       originalCt = (file && (file.contentType || file.metadata?.contentType)) || 'application/octet-stream';
       const wantsWebp = acceptsWebp(req) && originalCt.startsWith('image/') && originalCt !== 'image/webp';
       if (wantsWebp) {
         res.setHeader('Content-Type', 'image/webp');
         transformed = true;
+        const sharp = await getSharp();
         const transformer = sharp().webp({ quality: 82 });
         stream.pipe(transformer).on('error', (err) => {
           console.error('[sharp] transform error', err?.message || err);
@@ -839,7 +843,13 @@ app.post('/api/public/quote-request', async (req, res) => {
     const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
     const fromName = process.env.MAILERSEND_FROM_NAME || 'Car Parts France';
     const toEmail = process.env.SUPPORT_EMAIL || fromEmail;
+    const isVercel = !!process.env.VERCEL;
+    const dryRun = (!apiKey || !fromEmail || !toEmail) && !isVercel;
     if (!apiKey || !fromEmail || !toEmail) {
+      console.warn('[quote-request] Mailer non configuré', { hasApiKey: !!apiKey, hasFrom: !!fromEmail, hasTo: !!toEmail, NODE_ENV: process.env.NODE_ENV, VERCEL: process.env.VERCEL });
+      if (dryRun) {
+        return res.json({ ok: true, dryRun: true });
+      }
       return res.status(500).json({ ok: false, error: 'mailer_not_configured' });
     }
     const mailerSend = new MailerSend({ apiKey });
@@ -865,6 +875,7 @@ app.post('/api/public/quote-request', async (req, res) => {
     await mailerSend.email.send(params);
     return res.json({ ok: true });
   } catch (err) {
+    console.error('[quote-request] send_failed', err?.message || err);
     return res.status(500).json({ ok: false, error: 'send_failed' });
   }
 });
