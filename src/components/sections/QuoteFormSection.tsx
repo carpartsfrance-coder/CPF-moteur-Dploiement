@@ -275,6 +275,7 @@ const QuoteFormSection: React.FC = () => {
   });
 
   return (
+    <>
     <Box
       id="devis"
       component={motion.div}
@@ -811,6 +812,7 @@ const QuoteFormSection: React.FC = () => {
         {snackMessage}
       </Alert>
     </Snackbar>
+    </>
   );
 };
 
