@@ -886,6 +886,9 @@ app.post('/api/public/quote-request', async (req, res) => {
         const textPrimary = process.env.MAILERSEND_TEXT_PRIMARY || '#111827';
         const websiteUrl = process.env.COMPANY_WEBSITE_URL || '';
         const logoUrl = process.env.MAILERSEND_LOGO_URL || (websiteUrl ? websiteUrl.replace(/\/$/, '') + '/images/logo.png' : '');
+        const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+        const replyToRaw = String(process.env.MAILERSEND_REPLY_TO || fromEmail || '').trim();
+        const replyToFinal = emailRegex.test(replyToRaw) ? replyToRaw : (emailRegex.test(String(fromEmail || '').trim()) ? String(fromEmail).trim() : '');
         const ackSubject = `Nous avons bien reçu votre demande de devis — ${companyName} [${prettyRef}]`;
         const ackText = [
           `Bonjour ${name || ''},`,
@@ -934,8 +937,10 @@ app.post('/api/public/quote-request', async (req, res) => {
           .setTo([new Recipient(email, name || email)])
           .setSubject(ackSubject)
           .setText(ackText)
-          .setHtml(ackHtml)
-          .setReplyTo(new Sender(process.env.MAILERSEND_REPLY_TO || fromEmail, fromDisplay));
+          .setHtml(ackHtml);
+        if (replyToFinal) {
+          ackParams.setReplyTo(new Sender(replyToFinal, fromDisplay));
+        }
         await mailerSend.email.send(ackParams);
         sentAck = true;
       } catch (e) {
