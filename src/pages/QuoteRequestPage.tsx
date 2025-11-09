@@ -11,6 +11,7 @@ import {
   Divider,
   Chip,
   InputAdornment,
+  Snackbar,
 } from '@mui/material';
 import axios from 'axios';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
@@ -42,6 +43,8 @@ const QuoteSchema = Yup.object({
 
 const QuoteRequestPage: React.FC = () => {
   const location = useLocation();
+  const [snackOpen, setSnackOpen] = React.useState(false);
+  const [snackMessage, setSnackMessage] = React.useState('');
   const siteLabel = (process.env.REACT_APP_SITE_LABEL || 'carpartsfrance.fr');
   const defaults = React.useMemo(() => {
     const sp = new URLSearchParams(location.search);
@@ -185,7 +188,8 @@ const QuoteRequestPage: React.FC = () => {
                           message: values.message,
                           channel: 'api',
                         });
-                        alert("Votre demande a été transmise à votre application interne avec succès.");
+                        setSnackMessage('Merci, demande reçue. Nous revenons vers vous sous 24h.');
+                        setSnackOpen(true);
                         setSubmitting(false);
                         resetForm();
                         return;
@@ -227,7 +231,9 @@ const QuoteRequestPage: React.FC = () => {
                           message: values.message,
                           channel: 'email',
                         });
-                        alert('Votre demande a été envoyée. Nous revenons vers vous sous 24h.');
+                        const ref = (r.data && (r.data.ref as string)) || '';
+                        setSnackMessage(ref ? `Merci, demande reçue. Référence ${ref}. Nous revenons vers vous sous 24h.` : 'Merci, demande reçue. Nous revenons vers vous sous 24h.');
+                        setSnackOpen(true);
                         setSubmitting(false);
                         resetForm();
                         return;
@@ -238,7 +244,8 @@ const QuoteRequestPage: React.FC = () => {
                     const whatsappNumber = '330756875025';
                     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encoded}`;
                     window.open(whatsappUrl, '_blank');
-                    alert('Votre message WhatsApp est prêt. Vérifiez la nouvelle fenêtre pour l’envoyer.');
+                    setSnackMessage('Votre message WhatsApp est prêt. Vérifiez la nouvelle fenêtre pour l’envoyer.');
+                    setSnackOpen(true);
                     addQuote({
                       name: values.name,
                       email: values.email,
@@ -441,6 +448,16 @@ const QuoteRequestPage: React.FC = () => {
             </Box>
           </Paper>
         </Box>
+        <Snackbar
+          open={snackOpen}
+          autoHideDuration={4000}
+          onClose={() => setSnackOpen(false)}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        >
+          <Alert onClose={() => setSnackOpen(false)} severity="success" variant="filled" sx={{ width: '100%' }}>
+            {snackMessage}
+          </Alert>
+        </Snackbar>
       </Container>
     </Box>
   );

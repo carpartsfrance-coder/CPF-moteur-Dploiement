@@ -853,8 +853,10 @@ app.post('/api/public/quote-request', async (req, res) => {
       return res.status(500).json({ ok: false, error: 'mailer_not_configured' });
     }
     const mailerSend = new MailerSend({ apiKey });
-    const subject = 'Nouvelle demande de devis';
+    const prettyRef = `DEV-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const subject = `Nouvelle demande de devis [${prettyRef}]`;
     const text = [
+      `Référence: ${prettyRef}`,
       'Demande de devis',
       `Nom: ${name || 'Non précisé'}`,
       `Email: ${email || 'Non précisé'}`,
@@ -879,7 +881,12 @@ app.post('/api/public/quote-request', async (req, res) => {
     if (email && /.+@.+/.test(email)) {
       try {
         const companyName = process.env.COMPANY_NAME || fromName || 'Car Parts France';
-        const ackSubject = `Nous avons bien reçu votre demande de devis — ${companyName}`;
+        const fromDisplay = process.env.MAILERSEND_FROM_NAME || companyName;
+        const secondaryColor = process.env.MAILERSEND_SECONDARY_COLOR || '#1d3557';
+        const textPrimary = process.env.MAILERSEND_TEXT_PRIMARY || '#111827';
+        const websiteUrl = process.env.COMPANY_WEBSITE_URL || '';
+        const logoUrl = process.env.MAILERSEND_LOGO_URL || (websiteUrl ? websiteUrl.replace(/\/$/, '') + '/images/logo.png' : '');
+        const ackSubject = `Nous avons bien reçu votre demande de devis — ${companyName} [${prettyRef}]`;
         const ackText = [
           `Bonjour ${name || ''},`,
           '',
@@ -890,29 +897,52 @@ app.post('/api/public/quote-request', async (req, res) => {
           (process.env.COMPANY_WHATSAPP_URL ? `WhatsApp: ${process.env.COMPANY_WHATSAPP_URL}` : '').trim(),
           (process.env.COMPANY_WEBSITE_URL ? `Site: ${process.env.COMPANY_WEBSITE_URL}` : '').trim(),
         ].filter(Boolean).join('\n');
-        const ackSafe = ackText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const ackHtml = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5;color:#111827">
-          <p>Bonjour ${name ? ackSafe.split('\n')[0].replace('Bonjour ','') : ''}</p>
-          <p>Nous avons bien reçu votre demande de devis${vehicleId ? ` (référence véhicule: <strong>${String(vehicleId).replace(/&/g,'&amp;').replace(/</g,'&lt;') }</strong>)` : ''}.<br />Notre équipe vous répondra sous 24 heures ouvrées.</p>
-          ${process.env.COMPANY_PHONE ? `<p style="margin:6px 0">Téléphone: <strong>${String(process.env.COMPANY_PHONE).replace(/&/g,'&amp;')}</strong></p>` : ''}
-          ${process.env.COMPANY_WHATSAPP_URL ? `<p style="margin:6px 0">WhatsApp: <a href="${String(process.env.COMPANY_WHATSAPP_URL).replace(/"/g,'&quot;')}">${String(process.env.COMPANY_WHATSAPP_URL).replace(/&/g,'&amp;')}</a></p>` : ''}
-          ${process.env.COMPANY_WEBSITE_URL ? `<p style="margin:6px 0">Site: <a href="${String(process.env.COMPANY_WEBSITE_URL).replace(/"/g,'&quot;')}">${String(process.env.COMPANY_WEBSITE_URL).replace(/&/g,'&amp;')}</a></p>` : ''}
-          <p style="margin-top:14px;color:#6b7280">${companyName}</p>
-        </div>`;
+
+        const safeVehicle = String(vehicleId || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        const safeName = String(name || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+        const safeMsg = String(message || '').trim().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br />');
+        const logoImg = logoUrl ? `<img src="${logoUrl}" alt="${companyName}" style="height:42px;max-width:180px;display:block" />` : '';
+        const ackHtml = `
+          <div style="font-family:-apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.55; color:${textPrimary}; background:#f8fafc; padding:20px">
+            <div style="max-width:720px; margin:0 auto; background:#ffffff; border:1px solid #e5e7eb; border-radius:16px; overflow:hidden; box-shadow:0 16px 40px rgba(15,23,42,0.08)">
+              <div style="height:6px; background:linear-gradient(135deg,#e63946 0%,#ff6b6b 100%)"></div>
+              <div style="display:flex; align-items:center; gap:12px; padding:16px 18px; background:#f8fafc; border-bottom:1px solid #e5e7eb">
+                ${logoImg}
+                <div style="font-weight:800; color:${secondaryColor}; font-size:16px">${companyName}</div>
+              </div>
+              <div style="padding:22px 22px 8px 22px">
+                <div style="font-weight:900; font-size:20px; margin-bottom:8px; color:${secondaryColor}">Merci, nous avons bien reçu votre demande</div>
+                <div>${safeName ? `Bonjour ${safeName},` : 'Bonjour,'}</div>
+                <div style="margin-top:10px">Nous avons bien reçu votre demande de devis${vehicleId ? ` (référence véhicule: <strong>${safeVehicle}</strong>)` : ''}. Notre équipe vous répondra sous 24 heures ouvrées.</div>
+                ${safeMsg ? `<div style="margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb"><div style="font-weight:700;margin-bottom:6px;color:${secondaryColor}">Votre message</div><div style="color:${textPrimary}">${safeMsg}</div></div>` : ''}
+                <div style="margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f9fafb">
+                  <div style="font-weight:700;margin-bottom:6px;color:${secondaryColor}">Résumé de votre demande</div>
+                  <div>Nom: ${String(name || 'Non précisé').replace(/&/g,'&amp;')}</div>
+                  <div>Email: ${String(email || 'Non précisé').replace(/&/g,'&amp;')}</div>
+                  <div>Téléphone: ${String(phone || 'Non précisé').replace(/&/g,'&amp;')}</div>
+                  <div>Identifiant véhicule: ${safeVehicle || 'Non précisé'}</div>
+                </div>
+                
+                <div style="margin-top:18px;color:#6b7280">Cordialement,<br />${companyName}</div>
+              </div>
+              <div style="height:6px;background:linear-gradient(135deg,#e63946 0%,#ff6b6b 100%)"></div>
+            </div>
+          </div>`;
+
         const ackParams = new EmailParams()
-          .setFrom(new Sender(fromEmail, companyName))
+          .setFrom(new Sender(fromEmail, fromDisplay))
           .setTo([new Recipient(email, name || email)])
           .setSubject(ackSubject)
           .setText(ackText)
-          .setHtml(ackHtml);
+          .setHtml(ackHtml)
+          .setReplyTo(new Sender(process.env.MAILERSEND_REPLY_TO || fromEmail, fromDisplay));
         await mailerSend.email.send(ackParams);
         sentAck = true;
       } catch (e) {
         console.warn('[quote-request] ack_send_failed', e?.message || e);
       }
     }
-
-    return res.json({ ok: true, sentAck });
+    return res.json({ ok: true, sentAck, ref: prettyRef });
   } catch (err) {
     console.error('[quote-request] send_failed', err?.message || err);
     return res.status(500).json({ ok: false, error: 'send_failed' });

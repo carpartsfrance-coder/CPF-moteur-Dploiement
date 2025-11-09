@@ -106,7 +106,8 @@ const HeroSection: React.FC = () => {
       );
       if (res && res.data && res.data.ok) {
         addQuote({ name, email, phone, vehicleId, message, channel: 'email' });
-        setSnackMessage('Votre demande a été envoyée. Nous revenons vers vous sous 24h.');
+        const ref = (res.data && (res.data.ref as string)) || '';
+        setSnackMessage(ref ? `Merci, demande reçue. Référence ${ref}. Nous revenons vers vous sous 24h.` : 'Merci, demande reçue. Nous revenons vers vous sous 24h.');
         setSnackOpen(true);
         return;
       }
