@@ -2,12 +2,11 @@
   "version": 2,
   "functions": {
     "api/[...all].js": {
-      "includeFiles": ["server/**"]
+      "includeFiles": "server/**"
     }
   },
   "routes": [
-    { "src": "/(sitemap\\.xml|robots\\.txt|reply|gallery-file/.*|gallery-opt/.*)", "dest": "/api/[...all]" },
-    { "src": "/api/(.*)", "dest": "/api/[...all]" },
+    { "src": "/(sitemap\\.xml|robots\\.txt|reply|gallery-file/.*|gallery-opt/.*|api/.*)", "dest": "/api/[...all]" },
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ]
