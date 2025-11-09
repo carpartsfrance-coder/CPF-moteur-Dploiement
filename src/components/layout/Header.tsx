@@ -26,6 +26,7 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import HomeIcon from '@mui/icons-material/Home';
 import ContactsIcon from '@mui/icons-material/Contacts';
+import InfoIcon from '@mui/icons-material/Info';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
@@ -115,6 +116,13 @@ const Header: React.FC = () => {
             <HomeIcon color="primary" />
           </ListItemIcon>
           <ListItemText primary="Accueil" />
+        </ListItem>
+        
+        <ListItem component={RouterLink} to="/a-propos" onClick={() => setDrawerOpen(false)}>
+          <ListItemIcon>
+            <InfoIcon color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="À propos" />
         </ListItem>
         
         <ListItem component={RouterLink} to="/contact" onClick={() => setDrawerOpen(false)}>
@@ -269,6 +277,31 @@ const Header: React.FC = () => {
                       }}
                     >
                       Accueil
+                    </Button>
+                    <Button 
+                      component={RouterLink} 
+                      to="/a-propos" 
+                      color="inherit"
+                      sx={{ 
+                        fontWeight: 600,
+                        position: 'relative',
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          bottom: 0,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: '0%',
+                          height: '3px',
+                          bgcolor: 'primary.main',
+                          transition: 'width 0.3s ease-in-out',
+                        },
+                        '&:hover::after': {
+                          width: '80%',
+                        }
+                      }}
+                    >
+                      À propos
                     </Button>
                     <Button 
                       component={RouterLink} 
