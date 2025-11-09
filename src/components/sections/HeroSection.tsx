@@ -81,6 +81,37 @@ const HeroSection: React.FC = () => {
       }
     }
 
+    try {
+      const prefix = (() => {
+        const env = process.env.REACT_APP_BACKEND_URL || '';
+        if (env.trim()) return env.trim().replace(/\/$/, '');
+        if (typeof window !== 'undefined') {
+          const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+          return isLocal ? 'http://localhost:3001' : '';
+        }
+        return '';
+      })();
+      const res = await axios.post(
+        `${prefix}/api/public/quote-request`,
+        {
+          name,
+          email,
+          phone,
+          vehicleId,
+          message,
+          source: 'hero',
+          createdAt: new Date().toISOString(),
+        },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+      if (res && res.data && res.data.ok) {
+        addQuote({ name, email, phone, vehicleId, message, channel: 'email' });
+        setSnackMessage('Votre demande a été envoyée. Nous revenons vers vous sous 24h.');
+        setSnackOpen(true);
+        return;
+      }
+    } catch (e) {}
+
     const whatsappNumber = '330756875025';
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encoded}`;
     window.open(whatsappUrl, '_blank');

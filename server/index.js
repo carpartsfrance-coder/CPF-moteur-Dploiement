@@ -822,6 +822,53 @@ app.post('/api/public/replies', express.urlencoded({ extended: true, limit: '1mb
   return res.redirect(303, redirectUrl);
 });
 
+app.post('/api/public/quote-request', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const name = String(b.name || '');
+    const email = String(b.email || '');
+    const phone = String(b.phone || '');
+    const vehicleId = String(b.vehicleId || '');
+    const message = String(b.message || '');
+    const source = String(b.source || '');
+    const createdAt = String(b.createdAt || new Date().toISOString());
+    if (!vehicleId.trim() || (!phone.trim() && !email.trim())) {
+      return res.status(400).json({ ok: false, error: 'invalid_input' });
+    }
+    const apiKey = process.env.MAILERSEND_API_KEY;
+    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
+    const fromName = process.env.MAILERSEND_FROM_NAME || 'Car Parts France';
+    const toEmail = process.env.SUPPORT_EMAIL || fromEmail;
+    if (!apiKey || !fromEmail || !toEmail) {
+      return res.status(500).json({ ok: false, error: 'mailer_not_configured' });
+    }
+    const mailerSend = new MailerSend({ apiKey });
+    const subject = 'Nouvelle demande de devis';
+    const text = [
+      'Demande de devis',
+      `Nom: ${name || 'Non précisé'}`,
+      `Email: ${email || 'Non précisé'}`,
+      `Téléphone: ${phone || 'Non précisé'}`,
+      `Identifiant véhicule: ${vehicleId || 'Non précisé'}`,
+      `Message: ${message || 'Non précisé'}`,
+      source ? `Source: ${source}` : '',
+      `Date: ${createdAt}`,
+    ].filter(Boolean).join('\n');
+    const safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const html = `<pre style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;white-space:pre-wrap">${safe}</pre>`;
+    const params = new EmailParams()
+      .setFrom(new Sender(fromEmail, fromName))
+      .setTo([new Recipient(toEmail, toEmail)])
+      .setSubject(subject)
+      .setText(text)
+      .setHtml(html);
+    await mailerSend.email.send(params);
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'send_failed' });
+  }
+});
+
 // Lecture admin des réponses client (protégé par token)
 app.get('/api/replies/:id', (req, res) => {
   const { id } = req.params;

@@ -257,6 +257,46 @@ const QuoteRequestPage: React.FC = () => {
                       }
                     }
 
+                    // Tentative 2: endpoint interne (Vercel Functions)
+                    try {
+                      const prefix = (() => {
+                        const env = process.env.REACT_APP_BACKEND_URL || '';
+                        if (env.trim()) return env.trim().replace(/\/$/, '');
+                        if (typeof window !== 'undefined') {
+                          const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+                          return isLocal ? 'http://localhost:3001' : '';
+                        }
+                        return '';
+                      })();
+                      const r = await axios.post(
+                        `${prefix}/api/public/quote-request`,
+                        {
+                          name: values.name,
+                          email: values.email,
+                          phone: values.phone,
+                          vehicleId: values.vehicleId,
+                          message: values.message,
+                          source: 'form',
+                          createdAt: new Date().toISOString(),
+                        },
+                        { headers: { 'Content-Type': 'application/json' } }
+                      );
+                      if (r && r.data && r.data.ok) {
+                        addQuote({
+                          name: values.name,
+                          email: values.email,
+                          phone: values.phone,
+                          vehicleId: values.vehicleId,
+                          message: values.message,
+                          channel: 'email',
+                        });
+                        alert('Votre demande a été envoyée. Nous revenons vers vous sous 24h.');
+                        setSubmitting(false);
+                        resetForm();
+                        return;
+                      }
+                    } catch {}
+
                     // Fallback unique: WhatsApp (si API non configurée)
                     const whatsappNumber = '330756875025';
                     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encoded}`;
