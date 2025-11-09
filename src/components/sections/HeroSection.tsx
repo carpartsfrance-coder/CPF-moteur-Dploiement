@@ -22,7 +22,7 @@ const MotionButton = styled(motion.div)({});
 const HeroSection: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const heroVideoMp4 = (process.env.REACT_APP_HERO_VIDEO_URL_MP4 || '').trim();
+  const heroVideoMp4 = (process.env.REACT_APP_HERO_VIDEO_URL_MP4 || '/videos/hero.mp4').trim();
   const heroVideoMov = (process.env.REACT_APP_HERO_VIDEO_URL_MOV || '').trim();
   const heroPoster = '/images/Moteur ferrari 458 italia.webp';
   const siteLabel = (process.env.REACT_APP_SITE_LABEL || 'carpartsfrance.fr');

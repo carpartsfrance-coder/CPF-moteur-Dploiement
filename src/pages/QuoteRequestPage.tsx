@@ -94,21 +94,8 @@ const QuoteRequestPage: React.FC = () => {
 
           <Stack spacing={4} sx={{ position: 'relative', zIndex: 1 }}>
             <Box>
-              <Chip
-                icon={<RequestQuoteIcon />}
-                label="Réponse sous 24 heures"
-                color="primary"
-                sx={{ fontWeight: 600, mb: 2 }}
-              />
-              <Typography
-                variant="h3"
-                sx={{
-                  fontWeight: 800,
-                  color: 'text.primary',
-                  lineHeight: 1.1,
-                  maxWidth: 520,
-                }}
-              >
+              <Chip icon={<RequestQuoteIcon />} label="Réponse sous 24 heures" color="primary" sx={{ fontWeight: 600, mb: 2 }} />
+              <Typography variant="h3" sx={{ fontWeight: 800, color: 'text.primary', lineHeight: 1.1, maxWidth: 520 }}>
                 Demandez un devis précis pour votre moteur en seulement 2 minutes
               </Typography>
               <Typography variant="body1" color="text.secondary" sx={{ mt: 1, maxWidth: 600 }}>
@@ -117,26 +104,14 @@ const QuoteRequestPage: React.FC = () => {
               </Typography>
             </Box>
 
-            <Stack
-              direction={{ xs: 'column', lg: 'row' }}
-              spacing={{ xs: 4, lg: 6 }}
-              alignItems={{ xs: 'stretch', lg: 'flex-start' }}
-            >
+            <Stack direction={{ xs: 'column', lg: 'row' }} spacing={{ xs: 4, lg: 6 }} alignItems={{ xs: 'stretch', lg: 'flex-start' }}>
               <Stack spacing={3} sx={{ flex: { lg: '0 0 320px' } }}>
                 <Stack spacing={2}>
-                  {[{
-                    icon: <ShieldOutlinedIcon />,
-                    title: 'Pièces garanties',
-                    desc: "Chaque moteur est testé et couvert par une garantie constructeur."
-                  },{
-                    icon: <AccessTimeIcon />,
-                    title: 'Réponse rapide',
-                    desc: "Devis transmis sous 24 heures pendant les heures d'ouverture."
-                  },{
-                    icon: <HandshakeIcon />,
-                    title: 'Accompagnement dédié',
-                    desc: "Un expert vous guide du devis jusqu'à la livraison de votre moteur."
-                  }].map((f, idx) => (
+                  {[
+                    { icon: <ShieldOutlinedIcon />, title: 'Pièces garanties', desc: "Chaque moteur est testé et couvert par une garantie constructeur." },
+                    { icon: <AccessTimeIcon />, title: 'Réponse rapide', desc: "Devis transmis sous 24 heures pendant les heures d'ouverture." },
+                    { icon: <HandshakeIcon />, title: 'Accompagnement dédié', desc: "Un expert vous guide du devis jusqu'à la livraison de votre moteur." },
+                  ].map((f, idx) => (
                     <Paper key={idx} elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'rgba(148,163,184,0.25)', bgcolor: 'rgba(248, 250, 252, 0.6)' }}>
                       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
                         <Box sx={{ width: 48, height: 48, borderRadius: 2.5, bgcolor: 'rgba(37,99,235,0.08)', color: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -158,55 +133,17 @@ const QuoteRequestPage: React.FC = () => {
                     Besoin d'une réponse immédiate ?
                   </Typography>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2}>
-                    <Button
-                      component="a"
-                      href="tel:0465845488"
-                      startIcon={<PhoneIcon />}
-                      variant="outlined"
-                      sx={{
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        borderRadius: 2,
-                        px: 1.8,
-                        color: 'primary.main',
-                        borderColor: 'rgba(37,99,235,0.35)'
-                      }}
-                    >
+                    <Button component="a" href="tel:0465845488" startIcon={<PhoneIcon />} variant="outlined" sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, px: 1.8, color: 'primary.main', borderColor: 'rgba(37,99,235,0.35)' }}>
                       04 65 84 54 88
                     </Button>
-                    <Button
-                      component="a"
-                      href="https://wa.me/33756875025"
-                      target="_blank"
-                      rel="noopener"
-                      startIcon={<WhatsAppIcon />}
-                      variant="outlined"
-                      sx={{
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        borderRadius: 2,
-                        px: 1.8,
-                        color: 'success.main',
-                        borderColor: 'rgba(22,163,74,0.35)'
-                      }}
-                    >
-                      WhatsApp 07 56 87 50 25
+                    <Button component="a" href="https://wa.me/33756875025" target="_blank" rel="noopener" startIcon={<WhatsAppIcon />} variant="outlined" sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, px: 1.8, color: 'success.main', borderColor: 'rgba(22,163,74,0.35)' }}>
+                      WhatsApp
                     </Button>
                   </Stack>
                 </Stack>
               </Stack>
 
-              <Paper
-                elevation={0}
-                sx={{
-                  flex: 1,
-                  p: { xs: 3, md: 4 },
-                  borderRadius: 3,
-                  bgcolor: 'rgba(250, 250, 252, 0.9)',
-                  border: '1px solid rgba(99, 102, 241, 0.15)',
-                  boxShadow: '0 16px 40px rgba(79, 70, 229, 0.08)'
-                }}
-              >
+              <Paper elevation={0} sx={{ flex: 1, p: { xs: 3, md: 4 }, borderRadius: 3, bgcolor: 'rgba(250, 250, 252, 0.9)', border: '1px solid rgba(99, 102, 241, 0.15)', boxShadow: '0 16px 40px rgba(79, 70, 229, 0.08)' }}>
                 <Formik
                   enableReinitialize
                   initialValues={{ name: '', email: '', phone: '', vehicleId: defaults.vehicleId, message: defaults.message }}
@@ -425,25 +362,7 @@ const QuoteRequestPage: React.FC = () => {
                           Nous traitons vos données en toute confidentialité et ne les partageons jamais sans votre accord.
                         </Alert>
 
-                        <Button
-                          type="submit"
-                          variant="contained"
-                          size="large"
-                          disabled={isSubmitting}
-                          startIcon={<RequestQuoteIcon />}
-                          sx={{
-                            textTransform: 'none',
-                            fontWeight: 700,
-                            borderRadius: '12px',
-                            py: 1.5,
-                            boxShadow: '0 16px 32px rgba(79, 70, 229, 0.25)',
-                            background: 'linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)',
-                            '&:hover': {
-                              background: 'linear-gradient(135deg, #1D4ED8 0%, #6D28D9 100%)',
-                              transform: 'translateY(-2px)'
-                            }
-                          }}
-                        >
+                        <Button type="submit" variant="contained" size="large" disabled={isSubmitting} startIcon={<RequestQuoteIcon />} sx={{ textTransform: 'none', fontWeight: 700, borderRadius: '12px', py: 1.5, boxShadow: '0 16px 32px rgba(79, 70, 229, 0.25)', background: 'linear-gradient(135deg, #2563EB 0%, #7C3AED 100%)', '&:hover': { background: 'linear-gradient(135deg, #1D4ED8 0%, #6D28D9 100%)', transform: 'translateY(-2px)' } }}>
                           Envoyer ma demande de devis
                         </Button>
                       </Stack>
@@ -454,6 +373,74 @@ const QuoteRequestPage: React.FC = () => {
             </Stack>
           </Stack>
         </Paper>
+        {/* Réassurance partenaires (cartes avec logos) — positionnée sous le formulaire */}
+        <Box sx={{ mt: 8, px: { xs: 1, md: 0 } }}>
+          <Paper
+            elevation={0}
+            sx={{
+              borderRadius: 3,
+              p: { xs: 2, md: 3 },
+              border: '1px solid rgba(0,0,0,0.06)',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%)',
+              backdropFilter: 'blur(4px)'
+            }}
+          >
+            <Stack spacing={0.75} alignItems="center" textAlign="center" sx={{ mb: 1 }}>
+              <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.2 }}>
+                Nos moteurs ont déjà été montés par
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Des garages et entreprises partenaires partout en France ont installé nos moteurs avec succès.
+              </Typography>
+            </Stack>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', md: 'repeat(3,1fr)' },
+                gap: { xs: 1.5, md: 2 }
+              }}
+            >
+              {[{
+                src: '/images/partners/logo-porsche.webp',
+                alt: 'Centre Porsche Toulon',
+                name: 'Centre Porsche Toulon',
+                imgSx: { height: { xs: 34, md: 46 } }
+              },{
+                src: '/images/partners/mougins-autosport.webp',
+                alt: 'Mougins Autosport',
+                name: 'Mougins Autosport',
+                imgSx: { height: { xs: 34, md: 46 }, bgcolor: 'white', borderRadius: 1, p: 0.5 }
+              },{
+                src: '/images/partners/sun-motors.webp',
+                alt: 'Sun Motors',
+                name: 'Sun Motors',
+                imgSx: { height: { xs: 34, md: 46 } }
+              }].map((p, i) => (
+                <Paper
+                  key={i}
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: 2,
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    transition: 'transform .2s ease, box-shadow .2s ease, border-color .2s ease',
+                    '&:hover': {
+                      transform: 'translateY(-3px)',
+                      boxShadow: '0 12px 24px rgba(15,23,42,0.08)',
+                      borderColor: 'rgba(37,99,235,0.28)'
+                    }
+                  }}
+                >
+                  <Stack spacing={1} alignItems="center">
+                    <Box component="img" src={p.src} alt={p.alt} sx={p.imgSx} loading="lazy" decoding="async" />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{p.name}</Typography>
+                  </Stack>
+                </Paper>
+              ))}
+            </Box>
+          </Paper>
+        </Box>
       </Container>
     </Box>
   );

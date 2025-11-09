@@ -873,7 +873,46 @@ app.post('/api/public/quote-request', async (req, res) => {
       .setText(text)
       .setHtml(html);
     await mailerSend.email.send(params);
-    return res.json({ ok: true });
+
+    // Accusé de réception au client (si un email a été fourni)
+    let sentAck = false;
+    if (email && /.+@.+/.test(email)) {
+      try {
+        const companyName = process.env.COMPANY_NAME || fromName || 'Car Parts France';
+        const ackSubject = `Nous avons bien reçu votre demande de devis — ${companyName}`;
+        const ackText = [
+          `Bonjour ${name || ''},`,
+          '',
+          `Nous avons bien reçu votre demande de devis${vehicleId ? ` (référence véhicule: ${vehicleId})` : ''}.`,
+          'Notre équipe vous répondra sous 24 heures ouvrées.',
+          '',
+          (process.env.COMPANY_PHONE ? `Téléphone: ${process.env.COMPANY_PHONE}` : '').trim(),
+          (process.env.COMPANY_WHATSAPP_URL ? `WhatsApp: ${process.env.COMPANY_WHATSAPP_URL}` : '').trim(),
+          (process.env.COMPANY_WEBSITE_URL ? `Site: ${process.env.COMPANY_WEBSITE_URL}` : '').trim(),
+        ].filter(Boolean).join('\n');
+        const ackSafe = ackText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const ackHtml = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.5;color:#111827">
+          <p>Bonjour ${name ? ackSafe.split('\n')[0].replace('Bonjour ','') : ''}</p>
+          <p>Nous avons bien reçu votre demande de devis${vehicleId ? ` (référence véhicule: <strong>${String(vehicleId).replace(/&/g,'&amp;').replace(/</g,'&lt;') }</strong>)` : ''}.<br />Notre équipe vous répondra sous 24 heures ouvrées.</p>
+          ${process.env.COMPANY_PHONE ? `<p style="margin:6px 0">Téléphone: <strong>${String(process.env.COMPANY_PHONE).replace(/&/g,'&amp;')}</strong></p>` : ''}
+          ${process.env.COMPANY_WHATSAPP_URL ? `<p style="margin:6px 0">WhatsApp: <a href="${String(process.env.COMPANY_WHATSAPP_URL).replace(/"/g,'&quot;')}">${String(process.env.COMPANY_WHATSAPP_URL).replace(/&/g,'&amp;')}</a></p>` : ''}
+          ${process.env.COMPANY_WEBSITE_URL ? `<p style="margin:6px 0">Site: <a href="${String(process.env.COMPANY_WEBSITE_URL).replace(/"/g,'&quot;')}">${String(process.env.COMPANY_WEBSITE_URL).replace(/&/g,'&amp;')}</a></p>` : ''}
+          <p style="margin-top:14px;color:#6b7280">${companyName}</p>
+        </div>`;
+        const ackParams = new EmailParams()
+          .setFrom(new Sender(fromEmail, companyName))
+          .setTo([new Recipient(email, name || email)])
+          .setSubject(ackSubject)
+          .setText(ackText)
+          .setHtml(ackHtml);
+        await mailerSend.email.send(ackParams);
+        sentAck = true;
+      } catch (e) {
+        console.warn('[quote-request] ack_send_failed', e?.message || e);
+      }
+    }
+
+    return res.json({ ok: true, sentAck });
   } catch (err) {
     console.error('[quote-request] send_failed', err?.message || err);
     return res.status(500).json({ ok: false, error: 'send_failed' });
