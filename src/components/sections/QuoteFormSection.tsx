@@ -205,6 +205,10 @@ const QuoteFormSection: React.FC = () => {
             message: values.message,
             channel: 'api',
           });
+          try {
+            (window as any).dataLayer = (window as any).dataLayer || [];
+            (window as any).dataLayer.push({ event: 'lead_submitted', channel: 'form', ref: '' });
+          } catch {}
           setSnackMessage('Merci, demande reçue. Nous revenons vers vous sous 24h.');
           setSnackOpen(true);
           (setSubmitting && setSubmitting(false));
@@ -249,6 +253,10 @@ const QuoteFormSection: React.FC = () => {
             channel: 'email',
           });
           const ref = (r.data && (r.data.ref as string)) || '';
+          try {
+            (window as any).dataLayer = (window as any).dataLayer || [];
+            (window as any).dataLayer.push({ event: 'lead_submitted', channel: 'form', ref });
+          } catch {}
           setSnackMessage(ref ? `Merci, demande reçue. Référence ${ref}. Nous revenons vers vous sous 24h.` : 'Merci, demande reçue. Nous revenons vers vous sous 24h.');
           setSnackOpen(true);
           (setSubmitting && setSubmitting(false));
@@ -258,6 +266,10 @@ const QuoteFormSection: React.FC = () => {
       } catch (e) {}
       const whatsappNumber = '330756875025';
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encoded}`;
+      try {
+        (window as any).dataLayer = (window as any).dataLayer || [];
+        (window as any).dataLayer.push({ event: 'click_whatsapp' });
+      } catch {}
       window.open(whatsappUrl, '_blank');
       setSnackMessage('Votre message WhatsApp est prêt. Vérifiez la nouvelle fenêtre pour l’envoyer.');
       setSnackOpen(true);
@@ -614,6 +626,7 @@ const QuoteFormSection: React.FC = () => {
                       startIcon={<PhoneIcon />}
                       size="large"
                       href="tel:0465845488"
+                      onClick={() => { try { (window as any).dataLayer = (window as any).dataLayer || []; (window as any).dataLayer.push({ event: 'click_call' }); } catch {} }}
                       fullWidth
                       sx={{
                         py: 1.2,
@@ -635,6 +648,7 @@ const QuoteFormSection: React.FC = () => {
                       size="large"
                       href="https://wa.me/330756875025"
                       target="_blank"
+                      onClick={() => { try { (window as any).dataLayer = (window as any).dataLayer || []; (window as any).dataLayer.push({ event: 'click_whatsapp' }); } catch {} }}
                       fullWidth
                       sx={{
                         py: 1.2,
