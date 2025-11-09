@@ -10,6 +10,7 @@ import {
   useTheme,
   InputAdornment
 } from '@mui/material';
+import { Snackbar, Alert } from '@mui/material';
 import axios from 'axios';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
@@ -145,6 +146,8 @@ const validationSchema = yup.object({
 
 const QuoteFormSection: React.FC = () => {
   const theme = useTheme();
+  const [snackOpen, setSnackOpen] = React.useState(false);
+  const [snackMessage, setSnackMessage] = React.useState('');
   
   const steps = [
     {
@@ -202,7 +205,8 @@ const QuoteFormSection: React.FC = () => {
             message: values.message,
             channel: 'api',
           });
-          alert('Votre demande a été transmise avec succès.');
+          setSnackMessage('Merci, demande reçue. Nous revenons vers vous sous 24h.');
+          setSnackOpen(true);
           (setSubmitting && setSubmitting(false));
           formik.resetForm();
           return;
@@ -210,10 +214,53 @@ const QuoteFormSection: React.FC = () => {
       } catch (err) {
         console.error('Echec envoi API, fallback WhatsApp', err);
       }
+      // Tentative interne: utiliser URL relative si origine différente
+      try {
+        const prefix = (() => {
+          const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+          if (env && typeof window !== 'undefined') {
+            try {
+              const u = new URL(env);
+              if (u.origin !== window.location.origin) return '';
+            } catch {}
+          }
+          return (env || '').trim().replace(/\/$/, '');
+        })();
+        const r = await axios.post(
+          `${prefix}/api/public/quote-request`,
+          {
+            name: values.name,
+            email: values.email,
+            phone: values.phone,
+            vehicleId: values.vehicleId,
+            message: values.message,
+            source: 'quote-form-section',
+            createdAt: new Date().toISOString(),
+          },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+        if (r && r.data && r.data.ok) {
+          addQuote({
+            name: values.name,
+            email: values.email,
+            phone: values.phone,
+            vehicleId: values.vehicleId,
+            message: values.message,
+            channel: 'email',
+          });
+          const ref = (r.data && (r.data.ref as string)) || '';
+          setSnackMessage(ref ? `Merci, demande reçue. Référence ${ref}. Nous revenons vers vous sous 24h.` : 'Merci, demande reçue. Nous revenons vers vous sous 24h.');
+          setSnackOpen(true);
+          (setSubmitting && setSubmitting(false));
+          formik.resetForm();
+          return;
+        }
+      } catch (e) {}
       const whatsappNumber = '330756875025';
       const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encoded}`;
       window.open(whatsappUrl, '_blank');
-      alert('Votre message WhatsApp est prêt. Vérifiez la nouvelle fenêtre pour l’envoyer.');
+      setSnackMessage('Votre message WhatsApp est prêt. Vérifiez la nouvelle fenêtre pour l’envoyer.');
+      setSnackOpen(true);
       addQuote({
         name: values.name,
         email: values.email,
@@ -754,6 +801,16 @@ const QuoteFormSection: React.FC = () => {
         </Box>
       </Container>
     </Box>
+    <Snackbar
+      open={snackOpen}
+      autoHideDuration={4000}
+      onClose={() => setSnackOpen(false)}
+      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+    >
+      <Alert onClose={() => setSnackOpen(false)} severity="success" variant="filled" sx={{ width: '100%' }}>
+        {snackMessage}
+      </Alert>
+    </Snackbar>
   );
 };
 
