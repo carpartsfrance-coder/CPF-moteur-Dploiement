@@ -72,6 +72,29 @@
       "websiteUrl": "",
       "companyName": "Car Parts France Pro",
       "logoUrl": ""
+    },
+    "test": {
+      "toEmail": "client@example.com",
+      "toName": "Client Test",
+      "subject": "Test Admin Reply [DEV-TEST]",
+      "createdAt": "2025-11-09T16:20:02.253Z",
+      "details": {},
+      "websiteUrl": "http://localhost:3000",
+      "companyName": "Car Parts France",
+      "logoUrl": ""
+    },
+    "e1eb5e39-8aa1-403f-8211-d5eadac948ea": {
+      "toEmail": "Killian.belabbes@gmail.com",
+      "toName": "killian",
+      "subject": "Réponse à votre devis - Car Parts France Pro [DEV-E1EB5E39]",
+      "createdAt": "2025-11-09T16:35:07.064Z",
+      "details": {
+        "items": [],
+        "testsPerformed": []
+      },
+      "websiteUrl": "http://localhost:3000",
+      "companyName": "Car Parts France",
+      "logoUrl": ""
     }
   },
   "1eccc3e1-7b92-45fa-95cc-ee625e67e654": [
@@ -107,6 +130,30 @@
       "brand": "Porsche ",
       "model": "Cayenne Turbo",
       "year": "2055"
+    }
+  ],
+  "test": [
+    {
+      "id": "d5d620fa-e21d-401c-b322-263245feeb2f",
+      "channel": "email",
+      "kind": "admin-email",
+      "fromName": "Car Parts France",
+      "fromEmail": "contact@cpfmoteur.fr",
+      "subject": "Test Admin Reply [DEV-TEST]",
+      "message": "Test reponse admin",
+      "createdAt": "2025-11-09T16:20:02.590Z"
+    }
+  ],
+  "e1eb5e39-8aa1-403f-8211-d5eadac948ea": [
+    {
+      "id": "ca39b4af-be72-4a9d-b7c9-3c90a8bfe876",
+      "channel": "email",
+      "kind": "admin-email",
+      "fromName": "Car Parts France",
+      "fromEmail": "contact@cpfmoteur.fr",
+      "subject": "Réponse à votre devis - Car Parts France Pro [DEV-E1EB5E39]",
+      "message": "Bonjour killian,\n\nMerci d'avoir contacté CAR PARTS FRANCE concernant votre demande.\n\nVoici notre proposition personnalisée ci-dessous.\n\nN’hésitez pas à revenir vers moi pour confirmer ce devis ou pour toute question complémentaire.\n\nBien cordialement Killian,\nCAR PARTS FRANCE",
+      "createdAt": "2025-11-09T16:35:07.529Z"
     }
   ]
 }

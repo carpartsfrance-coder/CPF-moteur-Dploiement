@@ -19,7 +19,7 @@ import EnginesListPage from './pages/EnginesListPage';
 import EnginesBrandPage from './pages/EnginesBrandPage';
 import CGVPage from './pages/CGVPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
-import AboutPage from './pages/AboutPage';
+ 
 
 function App() {
   return (
@@ -29,7 +29,7 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/contact" element={<ContactPage />} />
-          <Route path="/a-propos" element={<AboutPage />} />
+          <Route path="/a-propos" element={<Navigate to="/" replace />} />
           <Route path="/demande-devis" element={<QuoteRequestPage />} />
           <Route path="/demande-de-devis" element={<Navigate to="/demande-devis" replace />} />
           <Route path="/mentions-legales" element={<LegalPage />} />
