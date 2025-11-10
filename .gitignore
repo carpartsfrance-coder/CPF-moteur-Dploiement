@@ -9,3 +9,6 @@ npm-debug.log*
 yarn-error.log*
 dist
 coverage
+public/videos/
+public/reports/
+vercel.env.production

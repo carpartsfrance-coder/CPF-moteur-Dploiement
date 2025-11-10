@@ -312,6 +312,7 @@ app.get('/sitemap.xml', async (req, res) => {
     const urls = [
       { loc: `${origin}/`, changefreq: 'weekly', priority: '0.9' },
       { loc: `${origin}/contact`, changefreq: 'yearly', priority: '0.4' },
+      { loc: `${origin}/a-propos`, changefreq: 'yearly', priority: '0.4' },
       { loc: `${origin}/demande-devis`, changefreq: 'monthly', priority: '0.6' },
       { loc: `${origin}/mentions-legales`, changefreq: 'yearly', priority: '0.1' },
       { loc: `${origin}/moteurs`, changefreq: 'weekly', priority: '0.7' },

@@ -116,6 +116,9 @@ const Footer: React.FC = () => {
             <Link component={RouterLink} to="/contact" color="inherit" underline="hover" sx={{ display: 'block', mb: 1 }}>
               Contact
             </Link>
+            <Link component={RouterLink} to="/a-propos" color="inherit" underline="hover" sx={{ display: 'block', mb: 1 }}>
+              À propos
+            </Link>
             <Link component={RouterLink} to="/mentions-legales" color="inherit" underline="hover" sx={{ display: 'block', mb: 1 }}>
               Mentions légales
             </Link>

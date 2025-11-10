@@ -1,21 +1,25 @@
-import React from 'react';
-import { Box, Container, Typography, Paper, Divider, Avatar } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Container, Typography, Paper, Divider, Avatar, Button, Stack, Dialog, IconButton, LinearProgress, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import ScienceIcon from '@mui/icons-material/Science';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import FactCheckIcon from '@mui/icons-material/FactCheck';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
+import PhoneIcon from '@mui/icons-material/Phone';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import DownloadIcon from '@mui/icons-material/Download';
+import { motion } from 'framer-motion';
 
-const Bullet: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
-    <Box sx={{ width: 8, height: 8, mt: '10px', borderRadius: '50%', background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)' }} />
-    <Typography variant="body1" color="text.secondary">{children}</Typography>
-  </Box>
-);
+ 
 
 const SectionTitle: React.FC<{ title: string; overline?: string }> = ({ title, overline }) => (
-  <Box sx={{ mb: 3 }}>
+  <Box sx={{ mb: { xs: 2, md: 3 } }}>
     {overline ? (
       <Typography variant="overline" color="primary" sx={{ letterSpacing: '.08em', fontWeight: 700 }}>
         {overline}
@@ -33,17 +37,6 @@ const AboutPage: React.FC = () => {
     { value: '72h → 14 j', label: 'Expédition & livraison', detail: 'Selon disponibilité des stocks et destination.' },
   ];
 
-  const missionPoints = [
-    'Qualifier précisément chaque besoin (plaque, VIN, code moteur, contexte de panne).',
-    'Tester systématiquement chaque moteur: compression, leak-down, endoscopie, analyse d’huile et métaux.',
-    'Documenter la traçabilité: photos haute définition, numéros de série et rapport complet transmis.'
-  ];
-
-  const historyFacts = [
-    { title: 'Expérience terrain', detail: "Équipe issue de la mécanique auto, du SAV et de la logistique." },
-    { title: 'Réseau certifié', detail: 'Ateliers partenaires audités, transporteurs premium (UPS, DB Schenker).' },
-    { title: 'Approche transparente', detail: 'Références moteur validées, communication claire et suivi personnalisé.' }
-  ];
 
   const differentiators = [
     { title: 'Tests approfondis', detail: "Compression, leak-down, endoscopie, analyse d’huile/métaux, pression d’huile.", icon: <ScienceIcon fontSize="small" /> },
@@ -75,6 +68,12 @@ const AboutPage: React.FC = () => {
     { type: 'image', src: '/images/about/Endoscopie, soupape bon etat.jpg', title: 'Contrôle soupapes', caption: 'Validation visuelle des soupapes et sièges.' },
     { type: 'video', src: '/videos/about/Vidéo endoscopie cylindre rayé hs.mp4', poster: '/images/about/Endoscopie cylindre moteur bon etat.jpg', title: 'Endoscopie cylindre rayé', caption: 'Détection d’une rayure critique avant expédition.' }
   ];
+
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerItem, setViewerItem] = useState<null | { type: 'image' | 'video'; src: string; title?: string; poster?: string }>(null);
+  const [pdfLoaded, setPdfLoaded] = useState(false);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  
 
   const logisticsPoints = [
     'Conditionnement sur palette 120×80 cm avec protection renforcée.',
@@ -108,16 +107,7 @@ const AboutPage: React.FC = () => {
     'Support technique réactif : téléphone, WhatsApp, email.'
   ];
 
-  const caseStudy = {
-    context: 'SUV premium immobilisé suite à une casse moteur, garages déjà sollicités sans solution fiable.',
-    actions: [
-      'Analyse du besoin avec VIN, codes défaut et historique d’entretien.',
-      'Contrôle approfondi du moteur sélectionné (compression, endoscopie, analyse d’huile).',
-      'Rapport transmis avec photos HD, numéros de série et recommandations montage.',
-      'Expédition palette 120×80 cm, assurance et suivi jusqu’au garage partenaire.'
-    ],
-    outcome: 'Véhicule opérationnel en 7 jours, client final satisfait, aucune réclamation SAV.'
-  };
+  
 
   const faqItems = [
     {
@@ -138,54 +128,135 @@ const AboutPage: React.FC = () => {
     }
   ];
 
+  const issueProcedure = [
+    { step: '1', title: 'Signalement', detail: 'Vous nous informez du problème et partagez les éléments (photos/vidéos/description).' },
+    { step: '2', title: 'Diagnostic sous 24h', detail: 'Analyse par notre équipe technique et vérification documentaire.' },
+    { step: '3', title: 'Solution proposée', detail: 'Échange du moteur ou remboursement si non‑conformité documentée.' },
+    { step: '4', title: 'Suivi jusqu’à résolution', detail: 'Coordination logistique et accompagnement jusqu’à clôture.' }
+  ];
+
+  
+
   return (
     <Box>
       {/* Hero */}
-      <Box sx={{ background: 'linear-gradient(180deg, #ffffff 0%, rgba(0,0,0,0.02) 100%)', pt: { xs: 6, md: 10 }, pb: { xs: 6, md: 10 } }}>
+      <Box sx={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.05)', pt: { xs: 6, md: 10 }, pb: { xs: 6, md: 10 } }}>
         <Container maxWidth="lg">
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '7fr 5fr' }, gap: 4, alignItems: 'center' }}>
             <Box>
-              <Typography variant="h2" sx={{ fontWeight: 800, lineHeight: 1.1, mb: 2, fontSize: { xs: '2rem', md: '2.8rem' } }}>
-                À propos de Car Parts France
+              <Typography variant="h2" sx={{ fontWeight: 800, letterSpacing: '-.015em', lineHeight: 1.08, mb: 1.25, fontSize: { xs: '2rem', md: '2.6rem' } }}>
+                Moteurs d’occasion testés, compatibles et garantis 1 an
               </Typography>
-              <Typography variant="h5" color="text.secondary" sx={{ mb: 0, fontWeight: 500 }}>
-                Nous sommes une équipe spécialisée dans la sélection, le test et l’expédition de moteurs d’occasion compatibles, avec un haut niveau d’exigence qualité.
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 2, fontWeight: 500, maxWidth: 640 }}>
+                Devis en 24h. Livraison assurée 72h–14 jours. + de 400 clients livrés.
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ mb: 2 }}>
+                <Button component="a" href="/demande-devis" variant="contained" color="primary" size="large" disableElevation sx={{ fontWeight: 700, borderRadius: '999px', px: 2.8, py: 1.2, width: { xs: '100%', sm: 'auto' } }}>
+                  Demander un devis
+                </Button>
+                <Button component="a" href="tel:0465845488" variant="text" color="primary" startIcon={<PhoneIcon />} size="large" sx={{ textTransform: 'none', fontWeight: 600, px: 0.6, width: { xs: '100%', sm: 'auto' } }}>
+                  Appeler maintenant
+                </Button>
+                <Button component="a" href="https://wa.me/33756875025" target="_blank" rel="noopener" variant="text" color="success" startIcon={<WhatsAppIcon />} size="large" sx={{ textTransform: 'none', fontWeight: 600, px: 0.6, width: { xs: '100%', sm: 'auto' } }}>
+                  WhatsApp
+                </Button>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', opacity: 0.9 }}>
+                Compatibilité validée via VIN/Code moteur • Rapport de tests fourni • Transport assuré et suivi
               </Typography>
             </Box>
             <Box>
               <Box sx={{ mb: 2, position: 'relative' }}>
                 <Box
-                  component="img"
-                  src="/images/about/carparts-workshop.jpg"
-                  alt="Notre atelier"
-                  loading="lazy"
+                  component="video"
+                  src="/videos/hero2.mp4"
+                  poster="/images/about/carparts-workshop.jpg"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
                   sx={{
                     width: '100%',
                     height: { xs: 220, sm: 260, md: 300 },
                     objectFit: 'cover',
                     borderRadius: 2,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-                    border: '1px solid rgba(0,0,0,0.06)'
+                    boxShadow: '0 24px 40px rgba(2,6,23,0.08)',
+                    border: '1px solid rgba(0,0,0,0.04)',
+                    transition: 'transform 220ms ease, box-shadow 220ms ease',
+                    '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 30px 50px rgba(2,6,23,0.10)' }
                   }}
                 />
-                <Paper elevation={0} sx={{ position: 'absolute', left: 12, bottom: 12, px: 1.5, py: 0.5, borderRadius: 1, bgcolor: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <Typography variant="caption" sx={{ fontWeight: 600 }}>Notre atelier</Typography>
-                </Paper>
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    left: 12,
+                    bottom: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    bgcolor: 'rgba(0,0,0,0.55)',
+                    color: 'white',
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: '999px',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}
+                  aria-label="Son désactivé"
+                >
+                  <VolumeOffIcon sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>Son désactivé</Typography>
+                </Box>
               </Box>
-              <></>
             </Box>
           </Box>
         </Container>
       </Box>
       {/* Chiffres clés */}
-      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 5, md: 6 } }}>
+      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 5, md: 6 }, position: 'relative', '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))' }, '&::after': { content: '""', position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))' } }}>
         <Container maxWidth="lg">
-          <SectionTitle title="Chiffres clés" overline="En bref" />
+          <Box component={motion.div} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.4 }} transition={{ duration: 0.5, ease: 'easeOut' }}>
+            <SectionTitle title="Chiffres clés" overline="En bref" />
+          </Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
-            {stats.map((stat) => (
-              <Paper key={stat.label} elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(0,0,0,0.06)', bgcolor: 'white', transition: 'all 0.2s ease-in-out', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4, borderColor: 'rgba(0,0,0,0.08)' } }}>
-                <Typography variant="h4" sx={{ fontWeight: 800, color: 'primary.main', mb: 1 }}>{stat.value}</Typography>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{stat.label}</Typography>
+            {stats.map((stat, idx) => (
+              <Paper
+                key={stat.label}
+                elevation={0}
+                component={motion.div}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.45, ease: 'easeOut', delay: idx * 0.06 }}
+                sx={{
+                  p: 3,
+                  borderRadius: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  bgcolor: 'white',
+                  backgroundImage: 'radial-gradient(60% 60% at 100% 0%, rgba(230,57,70,0.08) 0%, rgba(230,57,70,0) 60%)',
+                  transition: 'transform .25s ease, box-shadow .25s ease, border-color .25s ease',
+                  '&:hover': { transform: 'translateY(-3px)', boxShadow: '0 12px 30px rgba(2,6,23,0.08)', borderColor: 'rgba(230,57,70,0.25)' }
+                }}
+              >
+                <Typography
+                  variant="h4"
+                  sx={{
+                    fontWeight: 900,
+                    mb: 0.5,
+                    lineHeight: 1,
+                    letterSpacing: '-.01em',
+                    background: 'linear-gradient(90deg, #e63946 0%, #ff6b6b 100%)',
+                    WebkitBackgroundClip: 'text',
+                    backgroundClip: 'text',
+                    color: 'transparent'
+                  }}
+                >
+                  {stat.value}
+                </Typography>
+                <Typography variant="overline" sx={{ letterSpacing: '.08em', fontWeight: 800, color: 'text.primary' }}>
+                  {stat.label}
+                </Typography>
                 <Typography variant="body2" color="text.secondary">{stat.detail}</Typography>
               </Paper>
             ))}
@@ -193,46 +264,15 @@ const AboutPage: React.FC = () => {
         </Container>
       </Box>
 
-      {/* Mission & ADN */}
-      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
-        <SectionTitle title="Notre mission et notre ADN" overline="Qui sommes‑nous" />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '7fr 5fr' }, gap: 4 }}>
-          <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)' }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Notre mission</Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-              Sélectionner, tester et livrer des moteurs d’occasion compatibles, en apportant un niveau d’exigence équivalent à du matériel neuf.
-            </Typography>
-            <Box sx={{ display: 'grid', gap: 1.5 }}>
-              {missionPoints.map((point) => (
-                <Bullet key={point}>{point}</Bullet>
-              ))}
-            </Box>
-          </Paper>
-          <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)' }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Ce qui nous définit</Typography>
-            <Box sx={{ display: 'grid', gap: 2 }}>
-              {historyFacts.map((fact) => (
-                <Box key={fact.title}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{fact.title}</Typography>
-                  <Typography variant="body2" color="text.secondary">{fact.detail}</Typography>
-                </Box>
-              ))}
-            </Box>
-          </Paper>
-        </Box>
-      </Container>
-
       {/* Pourquoi Car Parts France */}
-      <Box sx={{ bgcolor: 'rgba(248,249,250,0.45)', py: { xs: 6, md: 8 } }}>
+      <Box sx={{ bgcolor: 'rgba(248,249,250,0.45)', py: { xs: 6, md: 8 }, position: 'relative', '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))' }, '&::after': { content: '""', position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))' } }}>
         <Container maxWidth="lg">
           <SectionTitle title="Pourquoi les garages nous choisissent" overline="Nos différenciants" />
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' }, gap: { xs: 1.5, md: 2 } }}>
             {differentiators.map((item) => (
               <Paper key={item.title} elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', height: '100%', transition: 'all 0.2s ease-in-out', bgcolor: 'white', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
-                  <Box sx={{ width: 28, height: 28, borderRadius: '50%', bgcolor: 'primary.light', color: 'primary.main', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {item.icon}
-                  </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'primary.main' }} />
                   <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{item.title}</Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">{item.detail}</Typography>
@@ -245,11 +285,11 @@ const AboutPage: React.FC = () => {
       {/* Process */}
       <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
         <SectionTitle title="Notre méthode" overline="Processus" />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: { xs: 1.5, md: 2 } }}>
           {processSteps.map((step) => (
             <Paper key={step.step} elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', height: '100%', transition: 'all 0.2s ease-in-out', bgcolor: 'white', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-                <Box sx={{ width: 36, height: 36, borderRadius: 1, bgcolor: 'primary.light', color: 'primary.main', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{step.step}</Box>
+                <Box sx={{ width: 36, height: 36, borderRadius: 1, bgcolor: 'primary.main', color: 'primary.contrastText', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{step.step}</Box>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{step.title}</Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">{step.detail}</Typography>
@@ -259,17 +299,30 @@ const AboutPage: React.FC = () => {
       </Container>
 
       {/* Qualité contrôlée */}
-      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 } }}>
+      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 }, position: 'relative', '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))' }, '&::after': { content: '""', position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))' } }}>
         <Container maxWidth="lg">
           <SectionTitle title="Qualité contrôlée en atelier" overline="Tests en atelier" />
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 300px)', justifyContent: 'center', gap: { xs: 2, md: 2.5 } }}>
             {qualityGallery.map((item, idx) => (
               <Paper key={idx} elevation={0} sx={{ p: 1.5, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', transition: 'all 0.2s ease-in-out', bgcolor: 'white', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 } }}>
-                {item.type === 'image' ? (
-                  <Box component="img" src={item.src} alt={item.title} loading="lazy" sx={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 1, border: '1px solid rgba(0,0,0,0.06)' }} />
-                ) : (
-                  <Box component="video" src={item.src} poster={item.poster} controls sx={{ width: '100%', height: 180, borderRadius: 1, objectFit: 'cover', border: '1px solid rgba(0,0,0,0.06)' }} />
-                )}
+                <Box
+                  role="button"
+                  aria-label={`Agrandir ${item.title || (item.type === 'image' ? 'image' : 'vidéo')}`}
+                  onClick={() => { setViewerItem({ type: item.type as 'image' | 'video', src: item.src, title: item.title, poster: (item as any).poster }); setViewerOpen(true); }}
+                  sx={{ cursor: 'zoom-in', position: 'relative', borderRadius: 1, overflow: 'hidden' }}
+                >
+                  {item.type === 'image' ? (
+                    <Box component="img" src={item.src} alt={item.title} loading="lazy" sx={{ width: '100%', height: { xs: 180, sm: 200 }, objectFit: 'cover' }} />
+                  ) : (
+                    <Box component="video" src={item.src} poster={(item as any).poster} muted playsInline sx={{ width: '100%', height: { xs: 180, sm: 200 }, objectFit: 'cover' }} />
+                  )}
+                  <Box sx={{ position: 'absolute', top: 8, left: 8, bgcolor: 'rgba(0,0,0,0.55)', color: 'white', px: 1, py: 0.3, borderRadius: '999px', fontSize: 12, fontWeight: 700 }}>
+                    {item.type === 'video' ? 'Vidéo' : 'Image'}
+                  </Box>
+                  <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: 1.2, background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 100%)', color: 'white' }}>
+                    <Typography variant="caption" sx={{ opacity: 0.9, fontWeight: 600 }}>Voir en grand</Typography>
+                  </Box>
+                </Box>
                 <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 1 }}>{item.title}</Typography>
                 <Typography variant="body2" color="text.secondary">{item.caption}</Typography>
               </Paper>
@@ -278,16 +331,47 @@ const AboutPage: React.FC = () => {
         </Container>
       </Box>
 
+      <Dialog open={viewerOpen} onClose={() => { setViewerOpen(false); setViewerItem(null); }} maxWidth="lg" fullWidth>
+        <Box sx={{ position: 'relative', bgcolor: 'black', p: { xs: 1.5, md: 2 } }}>
+          <IconButton aria-label="Fermer" onClick={() => { setViewerOpen(false); setViewerItem(null); }} sx={{ position: 'absolute', top: 8, right: 8, color: 'white', zIndex: 1 }}>
+            <CloseIcon />
+          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: { xs: '40vh', md: '60vh' } }}>
+            {viewerItem?.type === 'image' && (
+              <Box component="img" src={viewerItem.src} alt={viewerItem.title} sx={{ maxWidth: '90vw', maxHeight: '80vh', width: 'auto', height: 'auto', objectFit: 'contain' }} />
+            )}
+            {viewerItem?.type === 'video' && (
+              <Box component="video" src={viewerItem.src} poster={viewerItem.poster} controls autoPlay sx={{ maxWidth: '90vw', maxHeight: '80vh', width: 'auto', height: 'auto', objectFit: 'contain' }} />
+            )}
+          </Box>
+          {viewerItem?.title && (
+            <Typography variant="caption" sx={{ color: 'white', opacity: 0.8, display: 'block', textAlign: 'center', mt: 1 }}>
+              {viewerItem.title}
+            </Typography>
+          )}
+        </Box>
+      </Dialog>
+
       {/* Logistique */}
       <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
         <SectionTitle title="Logistique & suivi" overline="Expédition" />
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '6fr 6fr' }, gap: 4, alignItems: 'center' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '6fr 6fr' }, gap: 4, alignItems: 'start' }}>
           <Box>
-            <Box sx={{ display: 'grid', gap: 1.5 }}>
-              {logisticsPoints.map((point) => (
-                <Bullet key={point}>{point}</Bullet>
-              ))}
-            </Box>
+            <Paper elevation={0} sx={{ p: { xs: 2.5, md: 3 }, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', bgcolor: 'white' }}>
+              <Box sx={{ display: 'grid', gap: 2 }}>
+                {logisticsPoints.map((point, i) => (
+                  <Box key={point} sx={{ display: 'flex', alignItems: 'flex-start', position: 'relative', pb: i < logisticsPoints.length - 1 ? 2 : 0 }}>
+                    <Box sx={{ position: 'relative', mr: 2 }}>
+                      <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'primary.main' }} />
+                      {i < logisticsPoints.length - 1 && (
+                        <Box sx={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)', width: 2, height: 'calc(100% + 16px)', bgcolor: 'rgba(0,0,0,0.1)' }} />
+                      )}
+                    </Box>
+                    <Typography variant="body1" color="text.secondary">{point}</Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Paper>
           </Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
             {[
@@ -295,7 +379,16 @@ const AboutPage: React.FC = () => {
               { src: '/images/about/Livraison garage Sun Motors.jpg', alt: 'Livraison en garage' }
             ].map((media, index) => (
               <Paper key={index} elevation={0} sx={{ p: 1.5, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', transition: 'all 0.2s ease-in-out', bgcolor: 'white', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 } }}>
-                <Box component="img" src={media.src} alt={media.alt} loading="lazy" sx={{ width: '100%', height: { xs: 200, md: 220 }, objectFit: 'cover', borderRadius: 1, border: '1px solid rgba(0,0,0,0.06)' }} />
+                <Box
+                  role="button"
+                  aria-label={`Agrandir ${media.alt}`}
+                  onClick={() => { setViewerItem({ type: 'image', src: media.src, title: media.alt }); setViewerOpen(true); }}
+                  sx={{ position: 'relative', borderRadius: 1, overflow: 'hidden', cursor: 'zoom-in' }}
+                >
+                  <Box component="img" src={media.src} alt={media.alt} loading="lazy" sx={{ width: '100%', height: { xs: 220, md: 240 }, objectFit: 'cover' }} />
+                  <Box sx={{ position: 'absolute', top: 8, left: 8, bgcolor: 'rgba(0,0,0,0.55)', color: 'white', px: 1, py: 0.3, borderRadius: '999px', fontSize: 12, fontWeight: 700 }}>Photo</Box>
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{media.alt}</Typography>
               </Paper>
             ))}
           </Box>
@@ -332,7 +425,7 @@ const AboutPage: React.FC = () => {
       </Container>
 
       {/* Équipe */}
-      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 } }}>
+      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 }, position: 'relative', '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))' }, '&::after': { content: '""', position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))' } }}>
         <Container maxWidth="lg">
           <SectionTitle title="L’équipe Car Parts France" overline="Équipe" />
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
@@ -366,47 +459,106 @@ const AboutPage: React.FC = () => {
       </Container>
 
       {/* Garantie */}
-      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 } }}>
+      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 }, position: 'relative', '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))' }, '&::after': { content: '""', position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))' } }}>
         <Container maxWidth="lg">
           <SectionTitle title="Garantie & support" overline="Engagements" />
-          <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)' }}>
-            <Box sx={{ display: 'grid', gap: 1.5 }}>
+          <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', bgcolor: 'white' }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Box sx={{ px: 1, py: 0.5, borderRadius: '999px', bgcolor: 'primary.main', color: 'primary.contrastText', fontSize: 12, fontWeight: 700 }}>Garantie 1 an</Box>
+              <Box sx={{ px: 1, py: 0.5, borderRadius: '999px', bgcolor: 'rgba(0,0,0,0.04)', color: 'text.secondary', fontSize: 12, fontWeight: 700 }}>Support réactif</Box>
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.2 }}>
               {guaranteeItems.map((item) => (
-                <Bullet key={item}>{item}</Bullet>
+                <Paper key={item} elevation={0} sx={{ p: 1.5, borderRadius: 1.5, border: '1px solid rgba(0,0,0,0.08)', bgcolor: 'white', display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'primary.main', mt: '6px' }} />
+                  <Typography variant="body2" color="text.secondary">{item}</Typography>
+                </Paper>
               ))}
+            </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 2 }}>
+              <Button variant="outlined" color="primary" component="a" href="tel:0465845488" size="small">Appeler</Button>
+              <Button variant="outlined" color="success" component="a" href="https://wa.me/33756875025" size="small">WhatsApp</Button>
             </Box>
           </Paper>
         </Container>
       </Box>
 
-      {/* Étude de cas */}
       <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
-        <SectionTitle title="Étude de cas: SUV premium" overline="Cas réel" />
-        <Paper elevation={0} sx={{ p: { xs: 3, md: 4 }, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Contexte</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{caseStudy.context}</Typography>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Actions menées</Typography>
-          <Box sx={{ display: 'grid', gap: 1 }}>
-            {caseStudy.actions.map((action) => (
-              <Bullet key={action}>{action}</Bullet>
-            ))}
-          </Box>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 3, mb: 1 }}>Résultat</Typography>
-          <Typography variant="body2" color="text.secondary">{caseStudy.outcome}</Typography>
-        </Paper>
+        <SectionTitle title="Procédure en cas de souci" overline="Après‑vente" />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+          {issueProcedure.map((step) => (
+            <Paper key={step.step} elevation={0} sx={{ p: 3, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', height: '100%', bgcolor: 'white' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
+                <Box sx={{ width: 36, height: 36, borderRadius: 1, bgcolor: 'primary.light', color: 'primary.main', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{step.step}</Box>
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{step.title}</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary">{step.detail}</Typography>
+            </Paper>
+          ))}
+        </Box>
       </Container>
 
+      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 }, position: 'relative', '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))' }, '&::after': { content: '""', position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))' } }}>
+        <Container maxWidth="lg">
+          <SectionTitle title="Extrait de rapport de tests" overline="Transparence" />
+          <Paper elevation={0} sx={{ p: { xs: 1.5, md: 2 }, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', bgcolor: 'white' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <PictureAsPdfIcon color="primary" />
+                <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Exemple de rapport de tests</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Button component="a" href="/reports/rapport-tests.pdf" target="_blank" rel="noopener" size="small" variant="outlined" color="primary" startIcon={<OpenInNewIcon />}>Ouvrir</Button>
+                <Button component="a" href="/reports/rapport-tests.pdf" download size="small" variant="outlined" startIcon={<DownloadIcon />}>Télécharger</Button>
+                <Box
+                  role="button"
+                  aria-label="Aperçu du rapport"
+                  onClick={() => { setPdfLoaded(false); setPdfDialogOpen(true); }}
+                  sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, py: 0.5, border: '1px solid rgba(0,0,0,0.12)', borderRadius: 1, cursor: 'pointer', bgcolor: 'rgba(0,0,0,0.02)', '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' } }}
+                >
+                  <PictureAsPdfIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>Aperçu</Typography>
+                </Box>
+              </Box>
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Données sensibles floutées.</Typography>
+          </Paper>
+        </Container>
+      </Box>
+
+      <Dialog open={pdfDialogOpen} onClose={() => setPdfDialogOpen(false)} maxWidth="lg" fullWidth>
+        <Box sx={{ position: 'relative', bgcolor: 'background.paper', p: { xs: 1.5, md: 2 } }}>
+          <IconButton aria-label="Fermer" onClick={() => setPdfDialogOpen(false)} sx={{ position: 'absolute', top: 8, right: 8 }}>
+            <CloseIcon />
+          </IconButton>
+          {!pdfLoaded && <LinearProgress sx={{ mb: 1 }} />}
+          <Box
+            component="iframe"
+            src="/reports/rapport-tests.pdf#toolbar=0&navpanes=0&view=FitH"
+            title="Exemple de rapport de tests"
+            onLoad={() => setPdfLoaded(true)}
+            sx={{ width: '100%', height: { xs: '70vh', md: '80vh' }, border: 0, borderRadius: 1 }}
+          />
+        </Box>
+      </Dialog>
+
+      
+
       {/* FAQ */}
-      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 } }}>
+      <Box sx={{ bgcolor: 'rgba(248,249,250,0.6)', py: { xs: 6, md: 8 }, position: 'relative', '&::before': { content: '""', position: 'absolute', top: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to bottom, rgba(0,0,0,0.06), rgba(0,0,0,0))' }, '&::after': { content: '""', position: 'absolute', bottom: 0, left: 0, right: 0, height: 24, background: 'linear-gradient(to top, rgba(0,0,0,0.06), rgba(0,0,0,0))' } }}>
         <Container maxWidth="lg">
           <SectionTitle title="FAQ" overline="Questions fréquentes" />
-          <Divider sx={{ mb: 3 }} />
-          <Box sx={{ display: 'grid', gap: 2 }}>
+          <Divider sx={{ mb: 2 }} />
+          <Box>
             {faqItems.map((item) => (
-              <Box key={item.question}>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>{item.question}</Typography>
-                <Typography variant="body2" color="text.secondary">{item.answer}</Typography>
-              </Box>
+              <Accordion key={item.question} disableGutters sx={{ bgcolor: 'white', border: '1px solid rgba(0,0,0,0.08)', boxShadow: 'none', mb: 1, borderRadius: 1.5, overflow: 'hidden' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{item.question}</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography variant="body2" color="text.secondary">{item.answer}</Typography>
+                </AccordionDetails>
+              </Accordion>
             ))}
           </Box>
         </Container>
