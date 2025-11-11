@@ -1,0 +1,13 @@
+node_modules
+server/node_modules
+build
+.vercel
+.env
+.env.*
+.DS_Store
+npm-debug.log*
+yarn-error.log*
+dist
+coverage
+public/reports/
+vercel.env.production

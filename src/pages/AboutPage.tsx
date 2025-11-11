@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Container, Typography, Paper, Divider, Avatar, Button, Stack, Dialog, IconButton, LinearProgress, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { Box, Container, Typography, Paper, Divider, Avatar, Button, Stack, Dialog, IconButton, LinearProgress, Accordion, AccordionSummary, AccordionDetails, useTheme, useMediaQuery } from '@mui/material';
 import ScienceIcon from '@mui/icons-material/Science';
 import VerifiedIcon from '@mui/icons-material/Verified';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
@@ -73,6 +73,8 @@ const AboutPage: React.FC = () => {
   const [viewerItem, setViewerItem] = useState<null | { type: 'image' | 'video'; src: string; title?: string; poster?: string }>(null);
   const [pdfLoaded, setPdfLoaded] = useState(false);
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
 
   const logisticsPoints = [
@@ -167,45 +169,72 @@ const AboutPage: React.FC = () => {
             </Box>
             <Box>
               <Box sx={{ mb: 2, position: 'relative' }}>
-                <Box
-                  component="video"
-                  src="/videos/hero2.mp4"
-                  poster="/images/about/carparts-workshop.jpg"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  sx={{
-                    width: '100%',
-                    height: { xs: 220, sm: 260, md: 300 },
-                    objectFit: 'cover',
-                    borderRadius: 2,
-                    boxShadow: '0 24px 40px rgba(2,6,23,0.08)',
-                    border: '1px solid rgba(0,0,0,0.04)',
-                    transition: 'transform 220ms ease, box-shadow 220ms ease',
-                    '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 30px 50px rgba(2,6,23,0.10)' }
-                  }}
-                />
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    left: 12,
-                    bottom: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.5,
-                    bgcolor: 'rgba(0,0,0,0.55)',
-                    color: 'white',
-                    px: 1,
-                    py: 0.5,
-                    borderRadius: '999px',
-                    border: '1px solid rgba(255,255,255,0.2)'
-                  }}
-                  aria-label="Son désactivé"
-                >
-                  <VolumeOffIcon sx={{ fontSize: 18 }} />
-                  <Typography variant="caption" sx={{ fontWeight: 600 }}>Son désactivé</Typography>
-                </Box>
+                {isMobile ? (
+                  <Box
+                    component="img"
+                    src="/images/about/carparts-workshop.jpg"
+                    alt="Atelier"
+                    fetchpriority="high"
+                    decoding="async"
+                    loading="eager"
+                    sizes="(max-width: 600px) 100vw, 600px"
+                    width={1200}
+                    height={300}
+                    sx={{
+                      width: '100%',
+                      height: { xs: 220, sm: 260, md: 300 },
+                      objectFit: 'cover',
+                      borderRadius: 2,
+                      boxShadow: '0 24px 40px rgba(2,6,23,0.08)',
+                      border: '1px solid rgba(0,0,0,0.04)',
+                      transition: 'transform 220ms ease, box-shadow 220ms ease',
+                      '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 30px 50px rgba(2,6,23,0.10)' }
+                    }}
+                  />
+                ) : (
+                  <Box
+                    component="video"
+                    src="/videos/hero2.mp4"
+                    poster="/images/about/carparts-workshop.jpg"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    preload="metadata"
+                    sx={{
+                      width: '100%',
+                      height: { xs: 220, sm: 260, md: 300 },
+                      objectFit: 'cover',
+                      borderRadius: 2,
+                      boxShadow: '0 24px 40px rgba(2,6,23,0.08)',
+                      border: '1px solid rgba(0,0,0,0.04)',
+                      transition: 'transform 220ms ease, box-shadow 220ms ease',
+                      '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 30px 50px rgba(2,6,23,0.10)' }
+                    }}
+                  />
+                )}
+                {!isMobile && (
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 12,
+                      bottom: 12,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      bgcolor: 'rgba(0,0,0,0.55)',
+                      color: 'white',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: '999px',
+                      border: '1px solid rgba(255,255,255,0.2)'
+                    }}
+                    aria-label="Son désactivé"
+                  >
+                    <VolumeOffIcon sx={{ fontSize: 18 }} />
+                    <Typography variant="caption" sx={{ fontWeight: 600 }}>Son désactivé</Typography>
+                  </Box>
+                )}
               </Box>
             </Box>
           </Box>
@@ -312,9 +341,9 @@ const AboutPage: React.FC = () => {
                   sx={{ cursor: 'zoom-in', position: 'relative', borderRadius: 1, overflow: 'hidden' }}
                 >
                   {item.type === 'image' ? (
-                    <Box component="img" src={item.src} alt={item.title} loading="lazy" sx={{ width: '100%', height: { xs: 180, sm: 200 }, objectFit: 'cover' }} />
+                    <Box component="img" src={item.src} alt={item.title} loading="lazy" decoding="async" sizes="300px" width={300} height={200} sx={{ width: '100%', height: { xs: 180, sm: 200 }, objectFit: 'cover' }} />
                   ) : (
-                    <Box component="video" src={item.src} poster={(item as any).poster} muted playsInline sx={{ width: '100%', height: { xs: 180, sm: 200 }, objectFit: 'cover' }} />
+                    <Box component="video" src={item.src} poster={(item as any).poster} muted playsInline preload="none" sx={{ width: '100%', height: { xs: 180, sm: 200 }, objectFit: 'cover' }} />
                   )}
                   <Box sx={{ position: 'absolute', top: 8, left: 8, bgcolor: 'rgba(0,0,0,0.55)', color: 'white', px: 1, py: 0.3, borderRadius: '999px', fontSize: 12, fontWeight: 700 }}>
                     {item.type === 'video' ? 'Vidéo' : 'Image'}
@@ -385,7 +414,7 @@ const AboutPage: React.FC = () => {
                   onClick={() => { setViewerItem({ type: 'image', src: media.src, title: media.alt }); setViewerOpen(true); }}
                   sx={{ position: 'relative', borderRadius: 1, overflow: 'hidden', cursor: 'zoom-in' }}
                 >
-                  <Box component="img" src={media.src} alt={media.alt} loading="lazy" sx={{ width: '100%', height: { xs: 220, md: 240 }, objectFit: 'cover' }} />
+                  <Box component="img" src={media.src} alt={media.alt} loading="lazy" decoding="async" sizes="(max-width: 600px) 100vw, 50vw" width={800} height={480} sx={{ width: '100%', height: { xs: 220, md: 240 }, objectFit: 'cover' }} />
                   <Box sx={{ position: 'absolute', top: 8, left: 8, bgcolor: 'rgba(0,0,0,0.55)', color: 'white', px: 1, py: 0.3, borderRadius: '999px', fontSize: 12, fontWeight: 700 }}>Photo</Box>
                 </Box>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>{media.alt}</Typography>
