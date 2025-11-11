@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Box } from '@mui/material';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
@@ -23,6 +23,66 @@ import AboutPage from './pages/AboutPage';
  
 
 function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const setMeta = (title: string, description: string) => {
+      document.title = title;
+      let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+      if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute('name', 'description');
+        document.head.appendChild(meta);
+      }
+      meta.setAttribute('content', description);
+    };
+
+    const path = location.pathname;
+    if (path === '/a-propos') return; // Géré dans AboutPage
+
+    switch (path) {
+      case '/':
+        setMeta(
+          "Moteur d’occasion testé et garanti 1 an | Car Parts France Moteur",
+          "Devis en 24h, compatibilité confirmée (VIN/Code), tests en atelier, logistique suivie. 50 Boulevard Staligrand, 06300 Nice."
+        );
+        break;
+      case '/demande-devis':
+        setMeta(
+          'Demande de devis moteur d’occasion | Réponse en 24h',
+          'Décrivez votre besoin (VIN/code moteur). Compatibilité confirmée et prix sous 24h.'
+        );
+        break;
+      case '/contact':
+        setMeta(
+          'Contact | Car Parts France Moteur',
+          'Contactez‑nous par téléphone, WhatsApp ou email. Réponse rapide.'
+        );
+        break;
+      case '/moteurs':
+        setMeta(
+          'Moteurs d’occasion testés | Catalogue',
+          'Sélection testée, rapports fournis, livraison assurée, garantie 1 an.'
+        );
+        break;
+      case '/mentions-legales':
+        setMeta('Mentions légales | Car Parts France Moteur', 'Informations légales de Car Parts France Moteur.');
+        break;
+      case '/cgv':
+        setMeta('Conditions Générales de Vente | Car Parts France Moteur', 'Conditions générales de vente applicables.');
+        break;
+      case '/politique-de-confidentialite':
+        setMeta('Politique de confidentialité | Car Parts France Moteur', 'Politique de confidentialité et gestion des données.');
+        break;
+      default:
+        if (path.startsWith('/codes-moteur')) {
+          setMeta('Code moteur | Car Parts France Moteur', 'Compatibilité, disponibilité et conseils pour votre code moteur.');
+        } else if (path.startsWith('/moteurs/')) {
+          setMeta('Moteurs par marque | Car Parts France Moteur', 'Catalogue de moteurs d’occasion testés par marque.');
+        }
+    }
+  }, [location.pathname]);
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />

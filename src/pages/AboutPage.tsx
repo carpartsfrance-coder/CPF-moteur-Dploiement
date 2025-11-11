@@ -99,6 +99,19 @@ const AboutPage: React.FC = () => {
     }
   }, [isMobile, heroVideoSrc]);
   
+  useEffect(() => {
+    const title = 'À propos | Car Parts France Moteur';
+    const description = "Moteurs d’occasion testés, compatibles et garantis 1 an. Tests en atelier, logistique suivie, devis en 24h. Car Parts France Moteur – 50 Boulevard Staligrand, 06300 Nice.";
+    document.title = title;
+    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'description');
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', description);
+  }, []);
+  
 
   const logisticsPoints = [
     'Conditionnement sur palette 120×80 cm avec protection renforcée.',
