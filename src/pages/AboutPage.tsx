@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Container, Typography, Paper, Divider, Avatar, Button, Stack, Dialog, IconButton, LinearProgress, Accordion, AccordionSummary, AccordionDetails, useTheme, useMediaQuery } from '@mui/material';
 import ScienceIcon from '@mui/icons-material/Science';
 import VerifiedIcon from '@mui/icons-material/Verified';
@@ -75,6 +75,29 @@ const AboutPage: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const heroVideoSrc = isMobile ? '/videos/hero2.min.mp4' : '/videos/hero2.min.mp4';
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const v = heroVideoRef.current;
+    if (!v) return;
+    try {
+      // Renforce la compatibilité iOS Safari
+      v.muted = true;
+      // @ts-ignore playsInline côté WebKit
+      v.playsInline = true;
+      v.setAttribute('playsinline', '');
+      v.setAttribute('muted', '');
+      v.setAttribute('autoplay', '');
+      const p = v.play();
+      if (p && typeof (p as any).catch === 'function') {
+        (p as Promise<void>).catch(() => {
+          // ignore si le navigateur bloque malgré tout
+        });
+      }
+    } catch (_) {
+      // ignore
+    }
+  }, [isMobile, heroVideoSrc]);
   
 
   const logisticsPoints = [
@@ -171,13 +194,13 @@ const AboutPage: React.FC = () => {
               <Box sx={{ mb: 2, position: 'relative' }}>
                 <Box
                   component="video"
+                  ref={heroVideoRef}
                   src={heroVideoSrc}
-                  poster="/images/about/carparts-workshop.webp"
                   autoPlay
                   muted
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="auto"
                   sx={{
                     width: '100%',
                     height: { xs: 220, sm: 260, md: 300 },
