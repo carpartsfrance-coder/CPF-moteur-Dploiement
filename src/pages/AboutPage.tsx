@@ -174,7 +174,7 @@ const AboutPage: React.FC = () => {
                     component="img"
                     src="/images/about/carparts-workshop.jpg"
                     alt="Atelier"
-                    fetchpriority="high"
+                    fetchPriority="high"
                     decoding="async"
                     loading="eager"
                     sizes="(max-width: 600px) 100vw, 600px"
