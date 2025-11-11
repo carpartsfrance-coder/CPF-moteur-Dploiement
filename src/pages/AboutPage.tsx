@@ -62,11 +62,10 @@ const AboutPage: React.FC = () => {
   ];
 
   const qualityGallery = [
-    { type: 'image', src: '/images/about/Test Leak down moteur.png', title: 'Test leak-down', caption: 'Mesure de l’étanchéité cylindre par cylindre.' },
-    { type: 'image', src: '/images/about/prise de compression moteur.jpg', title: 'Prise de compression', caption: 'Contrôle des compressions pour vérifier la santé du bloc.' },
-    { type: 'image', src: '/images/about/Endoscopie cylindre moteur bon etat.jpg', title: 'Endoscopie cylindre', caption: 'Inspection visuelle interne pour détecter l’usure.' },
-    { type: 'image', src: '/images/about/Endoscopie, soupape bon etat.jpg', title: 'Contrôle soupapes', caption: 'Validation visuelle des soupapes et sièges.' },
-    { type: 'video', src: '/videos/about/Vidéo endoscopie cylindre rayé hs.mp4', poster: '/images/about/Endoscopie cylindre moteur bon etat.jpg', title: 'Endoscopie cylindre rayé', caption: 'Détection d’une rayure critique avant expédition.' }
+    { type: 'image', src: '/images/about/prise-de-compression-moteur.webp', title: 'Prise de compression', caption: 'Contrôle des compressions pour vérifier la santé du bloc.' },
+    { type: 'image', src: '/images/about/endoscopie-cylindre-moteur-bon-etat.webp', title: 'Endoscopie cylindre', caption: 'Inspection visuelle interne pour détecter l’usure.' },
+    { type: 'image', src: '/images/about/endoscopie-soupape-bon-etat.webp', title: 'Contrôle soupapes', caption: 'Validation visuelle des soupapes et sièges.' },
+    { type: 'video', src: '/videos/about/video-endoscopie-rayee-hs.mp4', poster: '/images/about/endoscopie-cylindre-moteur-bon-etat.webp', title: 'Endoscopie cylindre rayé', caption: 'Détection d’une rayure critique avant expédition.' }
   ];
 
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -75,6 +74,7 @@ const AboutPage: React.FC = () => {
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const heroVideoSrc = isMobile ? '/videos/hero2.min.mp4' : '/videos/hero2.min.mp4';
   
 
   const logisticsPoints = [
@@ -169,72 +169,46 @@ const AboutPage: React.FC = () => {
             </Box>
             <Box>
               <Box sx={{ mb: 2, position: 'relative' }}>
-                {isMobile ? (
-                  <Box
-                    component="img"
-                    src="/images/about/carparts-workshop.jpg"
-                    alt="Atelier"
-                    fetchPriority="high"
-                    decoding="async"
-                    loading="eager"
-                    sizes="(max-width: 600px) 100vw, 600px"
-                    width={1200}
-                    height={300}
-                    sx={{
-                      width: '100%',
-                      height: { xs: 220, sm: 260, md: 300 },
-                      objectFit: 'cover',
-                      borderRadius: 2,
-                      boxShadow: '0 24px 40px rgba(2,6,23,0.08)',
-                      border: '1px solid rgba(0,0,0,0.04)',
-                      transition: 'transform 220ms ease, box-shadow 220ms ease',
-                      '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 30px 50px rgba(2,6,23,0.10)' }
-                    }}
-                  />
-                ) : (
-                  <Box
-                    component="video"
-                    src="/videos/hero2.mp4"
-                    poster="/images/about/carparts-workshop.jpg"
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    preload="metadata"
-                    sx={{
-                      width: '100%',
-                      height: { xs: 220, sm: 260, md: 300 },
-                      objectFit: 'cover',
-                      borderRadius: 2,
-                      boxShadow: '0 24px 40px rgba(2,6,23,0.08)',
-                      border: '1px solid rgba(0,0,0,0.04)',
-                      transition: 'transform 220ms ease, box-shadow 220ms ease',
-                      '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 30px 50px rgba(2,6,23,0.10)' }
-                    }}
-                  />
-                )}
-                {!isMobile && (
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      left: 12,
-                      bottom: 12,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.5,
-                      bgcolor: 'rgba(0,0,0,0.55)',
-                      color: 'white',
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: '999px',
-                      border: '1px solid rgba(255,255,255,0.2)'
-                    }}
-                    aria-label="Son désactivé"
-                  >
-                    <VolumeOffIcon sx={{ fontSize: 18 }} />
-                    <Typography variant="caption" sx={{ fontWeight: 600 }}>Son désactivé</Typography>
-                  </Box>
-                )}
+                <Box
+                  component="video"
+                  src={heroVideoSrc}
+                  poster="/images/about/carparts-workshop.webp"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  preload="metadata"
+                  sx={{
+                    width: '100%',
+                    height: { xs: 220, sm: 260, md: 300 },
+                    objectFit: 'cover',
+                    borderRadius: 2,
+                    boxShadow: '0 24px 40px rgba(2,6,23,0.08)',
+                    border: '1px solid rgba(0,0,0,0.04)',
+                    transition: 'transform 220ms ease, box-shadow 220ms ease',
+                    '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 30px 50px rgba(2,6,23,0.10)' }
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    left: 12,
+                    bottom: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    bgcolor: 'rgba(0,0,0,0.55)',
+                    color: 'white',
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: '999px',
+                    border: '1px solid rgba(255,255,255,0.2)'
+                  }}
+                  aria-label="Son désactivé"
+                >
+                  <VolumeOffIcon sx={{ fontSize: 18 }} />
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>Son désactivé</Typography>
+                </Box>
               </Box>
             </Box>
           </Box>
@@ -404,8 +378,8 @@ const AboutPage: React.FC = () => {
           </Box>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
             {[
-              { src: '/images/about/Expedition moteur sur palette.jpg', alt: 'Conditionnement sur palette' },
-              { src: '/images/about/Livraison garage Sun Motors.jpg', alt: 'Livraison en garage' }
+              { src: '/images/about/expedition-moteur-sur-palette.webp', alt: 'Conditionnement sur palette' },
+              { src: '/images/about/livraison-garage-sun-motors.webp', alt: 'Livraison en garage' }
             ].map((media, index) => (
               <Paper key={index} elevation={0} sx={{ p: 1.5, borderRadius: 2, border: '1px solid rgba(0,0,0,0.08)', transition: 'all 0.2s ease-in-out', bgcolor: 'white', '&:hover': { transform: 'translateY(-2px)', boxShadow: 4 } }}>
                 <Box
