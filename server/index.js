@@ -2076,6 +2076,91 @@ app.get('/api/public/seo-check', async (req, res) => {
   }
 });
 
+// === Diagnostics réseau (DNS/TLS) ===
+app.get('/api/admin/diag/dns', async (req, res) => {
+  try {
+    const out = { openai: {}, mongo: {} };
+    const openaiHost = 'api.openai.com';
+    try {
+      const [a4, a6, lu] = await Promise.all([
+        dns.promises.resolve4(openaiHost).catch((e)=>({ error: String(e.message || e) })),
+        dns.promises.resolve6(openaiHost).catch((e)=>({ error: String(e.message || e) })),
+        new Promise((r)=> dns.lookup(openaiHost, { all: true }, (err, addr)=> r(err ? { error: String(err.message || err) } : { addrs: addr })))
+      ]);
+      out.openai = { resolve4: a4, resolve6: a6, lookupAll: lu };
+    } catch {}
+
+    // Résolution MongoDB (SRV ou hôtes directs)
+    try {
+      const uri = String(MONGODB_URI || '');
+      if (!uri) out.mongo = { configured: false };
+      else if (uri.startsWith('mongodb+srv://')) {
+        const m = uri.match(/^mongodb\+srv:\/\/[^@]+@?([^/?#]+)(?:[/?#].*)?$/i) || uri.match(/^mongodb\+srv:\/\/[^/]+\/\/([^/?#]+)(?:[/?#].*)?$/i);
+        const domain = m ? m[1] : uri.replace(/^mongodb\+srv:\/\//i, '').split('/')[0];
+        const srv = await dns.promises.resolveSrv(`_mongodb._tcp.${domain}`).catch((e)=>({ error: String(e.message || e) }));
+        const targets = Array.isArray(srv) ? srv.map((s)=>s.name) : [];
+        const r4 = {}; const r6 = {};
+        for (const h of targets.slice(0, 3)) {
+          r4[h] = await dns.promises.resolve4(h).catch((e)=>({ error: String(e.message || e) }));
+          r6[h] = await dns.promises.resolve6(h).catch((e)=>({ error: String(e.message || e) }));
+        }
+        out.mongo = { srvDomain: domain, srvRecords: srv, resolve4: r4, resolve6: r6 };
+      } else {
+        const hostsStr = uri.replace(/^mongodb:\/\//i, '').split('@').pop() || '';
+        const hosts = (hostsStr.split('/')[0] || '').split(',').map((h)=> h.trim().split(':')[0]).filter(Boolean);
+        const r4 = {}; const r6 = {};
+        for (const h of hosts.slice(0, 3)) {
+          r4[h] = await dns.promises.resolve4(h).catch((e)=>({ error: String(e.message || e) }));
+          r6[h] = await dns.promises.resolve6(h).catch((e)=>({ error: String(e.message || e) }));
+        }
+        out.mongo = { hosts, resolve4: r4, resolve6: r6 };
+      }
+    } catch {}
+
+    return res.json({ ok: true, dns: out, node: { version: process.version, ipv4First: true } });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: 'diag_dns_failed', details: String(e?.message || e).slice(0, 400) });
+  }
+});
+
+app.get('/api/admin/diag/ping-ai', async (req, res) => {
+  try {
+    const API_BASE = (process.env.AI_API_BASE || '').trim();
+    const API_KEY = (process.env.AI_API_KEY || '').trim();
+    if (!API_BASE || !API_KEY) return res.status(503).json({ ok: false, error: 'ai_not_configured' });
+    const url = `${API_BASE.replace(/\/$/, '')}/models`;
+    const agent = new https.Agent({ keepAlive: false, minVersion: 'TLSv1.2', lookup: (hostname, options, cb) => dns.lookup(hostname, { family: 4, all: false }, cb) });
+    try {
+      const r = await axios.get(url, { headers: { Authorization: `Bearer ${API_KEY}` }, httpsAgent: agent, timeout: 12000, validateStatus: ()=> true });
+      return res.json({ ok: r.status >= 200 && r.status < 300, status: r.status, bodyType: typeof r.data === 'string' ? 'text' : 'json' });
+    } catch (e) {
+      return res.status(502).json({ ok: false, error: 'ai_tls_failed', details: String(e?.message || e).slice(0, 400) });
+    }
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: 'diag_ai_failed', details: String(e?.message || e).slice(0, 400) });
+  }
+});
+
+app.get('/api/admin/diag/ping-mongo', async (req, res) => {
+  try {
+    if (!MONGODB_URI) return res.status(503).json({ ok: false, error: 'mongo_not_configured' });
+    const opts = { serverSelectionTimeoutMS: 7000 };
+    const cli = new MongoClient(MONGODB_URI, opts);
+    try {
+      await cli.connect();
+      const db = cli.db(MONGODB_DB);
+      const pong = await db.command({ ping: 1 });
+      try { await cli.close(); } catch {}
+      return res.json({ ok: true, pong });
+    } catch (e) {
+      try { await cli.close(); } catch {}
+      return res.status(502).json({ ok: false, error: 'mongo_tls_failed', details: String(e?.message || e).slice(0, 400) });
+    }
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: 'diag_mongo_failed', details: String(e?.message || e).slice(0, 400) });
+  }
+});
+
 if (!process.env.VERCEL) {
   app.get('/api/public/status', (req, res) => {
     try {
