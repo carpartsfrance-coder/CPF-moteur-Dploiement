@@ -3,7 +3,7 @@
   "functions": {
     "api/[...all].js": {
       "includeFiles": "server/**",
-      "runtime": "nodejs20"
+      "runtime": "nodejs20.x"
     }
   },
   "routes": [
