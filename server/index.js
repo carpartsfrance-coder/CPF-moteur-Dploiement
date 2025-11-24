@@ -1573,13 +1573,25 @@ ${finalHtml}`;
     // Contrôle qualité
     const qc = validateArticleHtml(finalHtml);
 
-    const slugBase = title || `${marque} ${code}`;
-    const slug = slugify(slugBase).slice(0, 200);
+    const slugBase = slugify(title || `${marque} ${code}`).slice(0, 200);
     const now = new Date().toISOString();
     const col = mongoDb.collection('blog_posts');
-    const doc = { title, slug, summary: fixedSummary, contentHtml: finalHtml, image: '', tags: outTags, status: 'draft', noindex: true, publishedAt: null, createdAt: now, updatedAt: now, sources: [], quality: qc };
-    const ins = await col.insertOne(doc);
-    return res.status(201).json({ ok: true, id: String(ins.insertedId), slug, qc });
+    let finalSlug = slugBase;
+    const baseDoc = { title, summary: fixedSummary, contentHtml: finalHtml, image: '', tags: outTags, status: 'draft', noindex: true, publishedAt: null, createdAt: now, updatedAt: now, sources: [], quality: qc };
+    let ins = null;
+    for (let i = 0; i < 50; i++) {
+      const candidate = (i === 0 ? slugBase : `${slugBase}-${i}`).slice(0, 200);
+      try {
+        ins = await col.insertOne({ ...baseDoc, slug: candidate });
+        finalSlug = candidate;
+        break;
+      } catch (e) {
+        if (e && e.code === 11000) { continue; }
+        throw e;
+      }
+    }
+    if (!ins) return res.status(409).json({ ok: false, error: 'duplicate_slug' });
+    return res.status(201).json({ ok: true, id: String(ins.insertedId), slug: finalSlug, qc });
   } catch (err) {
     const msg = (err && (err.message || String(err))) ? String(err.message || err) : '';
     console.error('[blog] ai generate error:', msg);
