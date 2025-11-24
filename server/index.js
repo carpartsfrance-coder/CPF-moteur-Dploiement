@@ -1447,11 +1447,13 @@ app.post('/api/admin/blog-posts/generate', async (req, res) => {
     const FALLBACK_MODEL = (process.env.AI_MODEL_FALLBACK || 'gpt-4o').trim();
     const MAX_TOKENS = Number(process.env.AI_MAX_TOKENS || 3500);
     const TEMPERATURE = Number(process.env.AI_TEMPERATURE || 0.3);
+    let FAST = (String(process.env.AI_FAST_MODE || '').trim() === '1') || (String(req.query?.fast || '').trim() === '1');
     if (!API_BASE || !API_KEY || !PRIMARY_MODEL) return res.status(503).json({ ok: false, error: 'ai_not_configured' });
 
     await initMongo();
     await ensureBlogIndexes();
     const b = req.body || {};
+    if (!FAST) { try { if (b && b.fast === true) FAST = true; } catch {} }
     const marque = String(b.marque || '').trim();
     const code = String(b.code || '').trim();
     const cylindree = String(b.cylindree || '').trim();
@@ -1494,7 +1496,7 @@ app.post('/api/admin/blog-posts/generate', async (req, res) => {
 
     let sourcesCtx = '';
     try {
-      const ragEnabled = (b.rag !== false) && Boolean(process.env.SERPAPI_KEY && process.env.FIRECRAWL_API_KEY);
+      const ragEnabled = (!FAST) && (b.rag !== false) && Boolean(process.env.SERPAPI_KEY && process.env.FIRECRAWL_API_KEY);
       if (ragEnabled) {
         const serpKey = String(process.env.SERPAPI_KEY || '').trim();
         const fcKey = String(process.env.FIRECRAWL_API_KEY || '').trim();
@@ -1590,11 +1592,18 @@ ${sourcesCtx || '(aucune)'}
 Données internes:
 ${JSON.stringify(data)}`;
 
-    const models = Array.from(new Set([PRIMARY_MODEL, FALLBACK_MODEL].filter(Boolean)));
+    const models = (() => {
+      const arr = Array.from(new Set([PRIMARY_MODEL, FALLBACK_MODEL].filter(Boolean)));
+      if (FAST) {
+        try { arr.sort((a, b) => (String(a).includes('mini') ? -1 : 1)); } catch {}
+      }
+      return arr;
+    })();
+    const MAX_TOKENS_EFF = FAST ? Math.min(MAX_TOKENS, 1200) : MAX_TOKENS;
     try { console.log('[ai] sourcesLen=%d dataLen=%d', sourcesCtx.length || 0, JSON.stringify(data).length); } catch {}
     let j = null, lastTxt = '';
     for (const m of models) {
-      const body = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: sys }, { role: 'user', content: userPrompt } ] };
+      const body = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS_EFF, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: sys }, { role: 'user', content: userPrompt } ] };
       const resp = await callChat(API_BASE, API_KEY, body);
       if (!resp.ok) { lastTxt = resp.errText || ''; continue; }
       j = resp.data;
@@ -1630,7 +1639,7 @@ ${JSON.stringify(data)}`;
     if (!finalHtml) return res.status(502).json({ ok: false, error: 'ai_empty' });
     let wc = wordCountFromHtml(finalHtml);
     console.log('[ai] wc_initial=%d', wc);
-    if (wc < 1200) {
+    if (!FAST && wc < 1200) {
       try {
         for (let pass = 0; pass < 3 && wc < 1200; pass++) {
           console.log('[ai] augment_pass=%d wc=%d', pass + 1, wc);
@@ -1646,7 +1655,7 @@ Article actuel (HTML):
 ${finalHtml}`;
           let j2 = null, last2 = '';
           for (const m of models) {
-            const body2 = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, messages: [ { role: 'system', content: sys }, { role: 'user', content: augmentUser } ] };
+            const body2 = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS_EFF, messages: [ { role: 'system', content: sys }, { role: 'user', content: augmentUser } ] };
             const resp2 = await callChat(API_BASE, API_KEY, body2);
             if (!resp2.ok) { last2 = resp2.errText || ''; continue; }
             j2 = resp2.data;
@@ -1674,7 +1683,7 @@ ${finalHtml}`;
           }
         }
         // Force expand si encore trop court
-        if (wc < 1200) {
+        if (!FAST && wc < 1200) {
           try {
             const forceUser = `Complète et développe l'article pour atteindre 1400–1700 mots en renforçant « Pannes spécifiques » et « FAQ ». Garde la même structure sémantique (aucun style/classe/<div>/<span>/<style>/<script>), ajoute du détail concret (symptômes → causes → risques → solutions). Réponds en JSON strict {"html":"..."}.
 
@@ -1684,7 +1693,7 @@ Article actuel (HTML):
 ${finalHtml}`;
             let jf = null, lastf = '';
             for (const m of models) {
-              const bodyf = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, messages: [ { role: 'system', content: sys }, { role: 'user', content: forceUser } ] };
+              const bodyf = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS_EFF, messages: [ { role: 'system', content: sys }, { role: 'user', content: forceUser } ] };
               const respf = await callChat(API_BASE, API_KEY, bodyf);
               if (!respf.ok) { lastf = respf.errText || ''; continue; }
               jf = respf.data;
@@ -1961,35 +1970,6 @@ ${baseHtml}`;
           }
           if (o2 && o2.html) {
             finalHtml = String(o2.html || '').trim();
-            wc = wordCountFromHtml(finalHtml);
-          }
-        } catch {}
-      }
-    }
-
-    if (brandHints.length && !/cylindres\s*ray[ée]s|cylinder\s*scoring/i.test(finalHtml || '')) {
-      const scoringUser = `Ajoute une section H3 "Cylindres rayés (scoring)" avec symptômes, causes (Lokasil), diagnostic (endoscopie + compression), risques, solutions et prévention. Réponds en JSON strict {\"html\":\"...\"}.\n\nArticle actuel (HTML):\n${finalHtml}`;
-      let js = null; let lasts = '';
-      for (const m of models) {
-        const bodys = { model: m, temperature: Math.min(TEMPERATURE, 0.15), max_tokens: MAX_TOKENS, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: sys }, { role: 'user', content: scoringUser } ] };
-        const rs2 = await fetch(`${API_BASE.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify(bodys) });
-        if (!rs2.ok) { lasts = await rs2.text().catch(()=> ''); continue; }
-        js = await rs2.json();
-        break;
-      }
-      if (js) {
-        const cs = js?.choices?.[0]?.message?.content || '';
-        try {
-          let os = null;
-          try { os = JSON.parse(cs); }
-          catch {
-            const cleaneds = String(cs || '').replace(/```json|```/gi, '').trim();
-            const fs = cleaneds.indexOf('{');
-            const ls = cleaneds.lastIndexOf('}');
-            if (fs !== -1 && ls !== -1 && ls > fs) os = JSON.parse(cleaneds.slice(fs, ls + 1));
-          }
-          if (os && os.html) {
-            finalHtml = String(os.html || '').trim();
             wc = wordCountFromHtml(finalHtml);
           }
         } catch {}
