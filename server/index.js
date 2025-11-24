@@ -118,6 +118,31 @@ app.get('/api/public/test-admin-token', (req, res) => {
   }
 });
 
+app.get('/api/admin/diag/ping-ai-chat', async (req, res) => {
+  try {
+    const API_BASE = (process.env.AI_API_BASE || '').trim();
+    const API_KEY = (process.env.AI_API_KEY || '').trim();
+    const PRIMARY_MODEL = (process.env.AI_MODEL || 'gpt-4o-mini').trim();
+    const FALLBACK_MODEL = (process.env.AI_MODEL_FALLBACK || 'gpt-4o').trim();
+    if (!API_BASE || !API_KEY || !PRIMARY_MODEL) return res.status(503).json({ ok: false, error: 'ai_not_configured' });
+    const models = Array.from(new Set([PRIMARY_MODEL, FALLBACK_MODEL].filter(Boolean)));
+    const results = [];
+    for (const m of models) {
+      const body = { model: m, temperature: 0.1, max_tokens: 50, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Réponds en JSON strict {"ok":true}.' }, { role: 'user', content: 'Dis simplement {"ok":true}.' } ] };
+      const resp = await callChat(API_BASE, API_KEY, body);
+      if (resp.ok) {
+        results.push({ model: m, ok: true });
+        return res.json({ ok: true, tried: models, successModel: m });
+      } else {
+        results.push({ model: m, ok: false, err: String(resp.errText || '') });
+      }
+    }
+    return res.status(502).json({ ok: false, error: 'chat_failed', results });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: 'diag_ai_chat_failed', details: String(e?.message || e).slice(0, 400) });
+  }
+});
+
 app.get('/api/admin/diag/ai-config', (req, res) => {
   try {
     const raw = String(process.env.AI_API_BASE || '');
