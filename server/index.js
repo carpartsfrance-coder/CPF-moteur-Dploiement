@@ -1161,6 +1161,60 @@ app.delete('/api/admin/blog-posts/:id', async (req, res) => {
   }
 });
 
+// === Admin: Blog posts BULK UPDATE (statut / noindex / publishedAt) ===
+app.post('/api/admin/blog-posts/bulk-update', async (req, res) => {
+  try {
+    if (!MONGODB_URI) return res.status(503).json({ ok: false, error: 'mongo_not_configured' });
+    await initMongo();
+    await ensureBlogIndexes();
+    const b = req.body || {};
+    const ids = Array.isArray(b.ids) ? b.ids : [];
+    if (!ids.length) return res.status(400).json({ ok: false, error: 'missing_ids' });
+    const oids = [];
+    for (const id of ids) { try { oids.push(new ObjectId(String(id))); } catch {} }
+    if (!oids.length) return res.status(400).json({ ok: false, error: 'invalid_ids' });
+
+    const set = {};
+    if ('status' in b) set.status = (b.status === 'published' ? 'published' : 'draft');
+    if ('noindex' in b) set.noindex = Boolean(b.noindex);
+    if ('publishedAt' in b) {
+      set.publishedAt = b.publishedAt ? new Date(b.publishedAt).toISOString() : null;
+    } else if (b.status === 'published') {
+      set.publishedAt = new Date().toISOString();
+    }
+    set.updatedAt = new Date().toISOString();
+
+    if (!Object.keys(set).length) return res.status(400).json({ ok: false, error: 'nothing_to_update' });
+    const col = mongoDb.collection('blog_posts');
+    const r = await col.updateMany({ _id: { $in: oids } }, { $set: set });
+    res.json({ ok: true, matched: r.matchedCount, modified: r.modifiedCount });
+  } catch (err) {
+    console.error('[blog] admin bulk-update error:', err);
+    res.status(500).json({ ok: false, error: 'admin_bulk_update_failed' });
+  }
+});
+
+// === Admin: Blog posts BULK DELETE ===
+app.post('/api/admin/blog-posts/bulk-delete', async (req, res) => {
+  try {
+    if (!MONGODB_URI) return res.status(503).json({ ok: false, error: 'mongo_not_configured' });
+    await initMongo();
+    await ensureBlogIndexes();
+    const b = req.body || {};
+    const ids = Array.isArray(b.ids) ? b.ids : [];
+    if (!ids.length) return res.status(400).json({ ok: false, error: 'missing_ids' });
+    const oids = [];
+    for (const id of ids) { try { oids.push(new ObjectId(String(id))); } catch {} }
+    if (!oids.length) return res.status(400).json({ ok: false, error: 'invalid_ids' });
+    const col = mongoDb.collection('blog_posts');
+    const r = await col.deleteMany({ _id: { $in: oids } });
+    res.json({ ok: true, deleted: r.deletedCount });
+  } catch (err) {
+    console.error('[blog] admin bulk-delete error:', err);
+    res.status(500).json({ ok: false, error: 'admin_bulk_delete_failed' });
+  }
+});
+
 app.post('/api/admin/blog-posts/generate', async (req, res) => {
   try {
     if (!MONGODB_URI) return res.status(503).json({ ok: false, error: 'mongo_not_configured' });

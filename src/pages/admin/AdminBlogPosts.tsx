@@ -58,6 +58,8 @@ const AdminBlogPosts: React.FC = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const [current, setCurrent] = useState<BlogPostItem | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -78,6 +80,7 @@ const AdminBlogPosts: React.FC = () => {
       setItems(arr);
       setTotal(Number(data?.total || 0));
       setPage(Number(data?.page || 1));
+      setSelected(new Set());
     } catch {
       setItems([]);
       setTotal(0);
@@ -288,6 +291,54 @@ const AdminBlogPosts: React.FC = () => {
       await load(page);
       if (current?.id === id) setCurrent(null);
     } catch {}
+  };
+
+  // Sélection multiple et actions en lot
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+  const selectAllPage = () => {
+    setSelected(new Set(items.map(i => i.id)));
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkUpdateStatus = async (status: 'published' | 'draft') => {
+    if (!selected.size) return;
+    try {
+      setBulkLoading(true);
+      const ids = Array.from(selected);
+      const body: any = { ids, status };
+      const res = await fetch(`${base}/api/admin/blog-posts/bulk-update`, { method: 'POST', headers, credentials: 'include', body: JSON.stringify(body) });
+      if (!res.ok) throw new Error('HTTP');
+      clearSelection();
+      await load(page);
+    } catch {
+      // ignore simple
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (!selected.size) return;
+    // eslint-disable-next-line no-restricted-globals
+    if (!confirm(`Supprimer ${selected.size} article(s) ?`)) return;
+    try {
+      setBulkLoading(true);
+      const ids = Array.from(selected);
+      const res = await fetch(`${base}/api/admin/blog-posts/bulk-delete`, { method: 'POST', headers, credentials: 'include', body: JSON.stringify({ ids }) });
+      if (!res.ok) throw new Error('HTTP');
+      clearSelection();
+      await load(page);
+    } catch {
+      // ignore simple
+    } finally {
+      setBulkLoading(false);
+    }
   };
 
   // Génération avec IA (brouillon noindex)
@@ -699,25 +750,41 @@ const AdminBlogPosts: React.FC = () => {
             <CircularProgress />
           </Box>
         ) : (
-          <Box sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }
-          }}>
-            {items.map((it) => (
-              <Paper key={it.id} sx={{ p: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{it.title}</Typography>
-                <Typography variant="caption" color="text.secondary">/{it.slug}</Typography>
-                <Divider sx={{ my: 1 }} />
-                <Stack direction="row" spacing={1}>
-                  <Chip size="small" label={it.status} color={it.status === 'published' ? 'success' : 'default'} />
-                </Stack>
-                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                  <Button size="small" variant="outlined" onClick={() => onEdit(it)}>Éditer</Button>
-                  <Button size="small" color="error" onClick={() => onDelete(it.id)}>Supprimer</Button>
-                </Stack>
-              </Paper>
-            ))}
+          <Box>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ xs: 'stretch', md: 'center' }} sx={{ mb: 1 }}>
+              <Typography variant="body2" sx={{ flex: 1 }}>Sélection: {selected.size}</Typography>
+              <Button size="small" onClick={selectAllPage} disabled={!items.length || bulkLoading}>Tout sélectionner</Button>
+              <Button size="small" onClick={clearSelection} disabled={!selected.size || bulkLoading}>Vider</Button>
+              <Button size="small" variant="contained" color="success" onClick={() => bulkUpdateStatus('published')} disabled={!selected.size || bulkLoading}>Publier</Button>
+              <Button size="small" variant="outlined" onClick={() => bulkUpdateStatus('draft')} disabled={!selected.size || bulkLoading}>Brouillon</Button>
+              <Button size="small" color="error" onClick={bulkDelete} disabled={!selected.size || bulkLoading}>Supprimer</Button>
+            </Stack>
+
+            <Box sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }
+            }}>
+              {items.map((it) => (
+                <Paper key={it.id} sx={{ p: 2, border: selected.has(it.id) ? '2px solid' : '1px solid', borderColor: selected.has(it.id) ? 'primary.main' : 'divider', borderRadius: 1 }}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Checkbox size="small" checked={selected.has(it.id)} onChange={() => toggleSelect(it.id)} />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>{it.title}</Typography>
+                      <Typography variant="caption" color="text.secondary">/{it.slug}</Typography>
+                    </Box>
+                  </Stack>
+                  <Divider sx={{ my: 1 }} />
+                  <Stack direction="row" spacing={1}>
+                    <Chip size="small" label={it.status} color={it.status === 'published' ? 'success' : 'default'} />
+                  </Stack>
+                  <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                    <Button size="small" variant="outlined" onClick={() => onEdit(it)}>Éditer</Button>
+                    <Button size="small" color="error" onClick={() => onDelete(it.id)}>Supprimer</Button>
+                  </Stack>
+                </Paper>
+              ))}
+            </Box>
           </Box>
         )}
         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
