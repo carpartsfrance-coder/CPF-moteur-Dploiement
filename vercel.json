@@ -7,9 +7,6 @@
   },
   "routes": [
     { "src": "/(sitemap\\.xml|robots\\.txt|reply|gallery-file/.*|gallery-opt/.*|api/.*)", "dest": "/api/[...all].js" },
-    { "src": "/assets/.*", "dest": "/api/[...all].js" },
-    { "src": "/blog", "dest": "/api/[...all].js" },
-    { "src": "/blog/.*", "dest": "/api/[...all].js" },
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ]

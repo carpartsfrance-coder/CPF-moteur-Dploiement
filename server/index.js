@@ -11,30 +11,11 @@ import fs from 'fs';
 import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
 import ejs from 'ejs';
 import { fileURLToPath } from 'url';
-import dns from 'dns';
-import { Agent, setGlobalDispatcher, fetch as undiciFetch } from 'undici';
-import axios from 'axios';
-import https from 'https';
 
 let __sharp = null;
 async function getSharp() { if (__sharp) return __sharp; const m = await import('sharp'); __sharp = m.default || m; return __sharp; }
 
 const app = express();
-// Forcer la préférence IPv4 pour éviter certains problèmes TLS/IPv6 en prod (Vercel)
-try { dns.setDefaultResultOrder('ipv4first'); } catch {}
-// Forcer undici (fetch Node) à utiliser IPv4 et HTTP/1.1 (désactiver HTTP/2)
-try {
-  const agent = new Agent({
-    connect: {
-      lookup: (hostname, options, cb) => dns.lookup(hostname, { family: 4, all: false }, cb),
-    },
-    allowH2: false,
-    keepAliveTimeout: 10000,
-    keepAliveMaxTimeout: 15000,
-  });
-  setGlobalDispatcher(agent);
-} catch {}
-try { if (!globalThis.fetch) { globalThis.fetch = undiciFetch; } } catch {}
 // EJS view engine (SSR des pages moteurs)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,21 +31,12 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const SERVER_LOCAL = `http://localhost:${PORT}`;
 const SERVER_LOCAL_127 = `http://127.0.0.1:${PORT}`;
 const DEFAULT_ALLOWED = ['http://localhost:3000', 'http://localhost:3001', SERVER_LOCAL, SERVER_LOCAL_127];
-
-// Démarrer le worker d'import CSV en arrière-plan (désactivé sur Vercel)
-try { if (!process.env.VERCEL && !process.env.VERCEL_URL) { startImportWorker(); } } catch {}
 const VERCEL_ORIGIN = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
-const WEBSITE_ORIGIN = (() => { try { return getWebsiteOrigin(); } catch { return ''; } })();
 const ENV_ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
-const ALLOWED_ORIGINS = Array.from(new Set([
-  ...DEFAULT_ALLOWED,
-  VERCEL_ORIGIN,
-  WEBSITE_ORIGIN,
-  ...ENV_ALLOWED
-].filter(Boolean)));
+const ALLOWED_ORIGINS = Array.from(new Set([...DEFAULT_ALLOWED, VERCEL_ORIGIN, ...ENV_ALLOWED].filter(Boolean)));
 
 // Utilitaire: attente
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -107,71 +79,6 @@ app.use(cors({
   credentials: true,
 }));
 
-// Endpoint public de diagnostic: compare ?token= avec BACKEND_TOKEN
-app.get('/api/public/test-admin-token', (req, res) => {
-  try {
-    const t = String(TOKEN || '').trim();
-    const q = String((req.query && req.query.token) || '');
-    res.json({ ok: true, hasToken: Boolean(t), providedLen: q.length, expectedLen: t.length, equals: q === t });
-  } catch {
-    res.status(500).json({ ok: false });
-  }
-});
-
-app.get('/api/admin/diag/ping-ai-chat', async (req, res) => {
-  try {
-    const API_BASE = (process.env.AI_API_BASE || '').trim();
-    const API_KEY = (process.env.AI_API_KEY || '').trim();
-    const PRIMARY_MODEL = (process.env.AI_MODEL || 'gpt-4o-mini').trim();
-    const FALLBACK_MODEL = (process.env.AI_MODEL_FALLBACK || 'gpt-4o').trim();
-    if (!API_BASE || !API_KEY || !PRIMARY_MODEL) return res.status(503).json({ ok: false, error: 'ai_not_configured' });
-    const models = Array.from(new Set([PRIMARY_MODEL, FALLBACK_MODEL].filter(Boolean)));
-    const results = [];
-    for (const m of models) {
-      const body = { model: m, temperature: 0.1, max_tokens: 50, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: 'Réponds en JSON strict {"ok":true}.' }, { role: 'user', content: 'Dis simplement {"ok":true}.' } ] };
-      const resp = await callChat(API_BASE, API_KEY, body);
-      if (resp.ok) {
-        results.push({ model: m, ok: true });
-        return res.json({ ok: true, tried: models, successModel: m });
-      } else {
-        results.push({ model: m, ok: false, err: String(resp.errText || '') });
-      }
-    }
-    return res.status(502).json({ ok: false, error: 'chat_failed', results });
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: 'diag_ai_chat_failed', details: String(e?.message || e).slice(0, 400) });
-  }
-});
-
-app.get('/api/admin/diag/ai-config', (req, res) => {
-  try {
-    const raw = String(process.env.AI_API_BASE || '');
-    const base = raw.trim();
-    let host = '', pathn = '';
-    try { const u = new URL(base.replace(/\/$/, '')); host = u.hostname; pathn = u.pathname; } catch {}
-    const model = String(process.env.AI_MODEL || '').trim();
-    const fallback = String(process.env.AI_MODEL_FALLBACK || '').trim();
-    return res.json({ ok: true, base, baseLen: base.length, host, path: pathn, model, fallback });
-  } catch (e) {
-    return res.status(500).json({ ok: false });
-  }
-});
-
-// Pré‑vol explicite pour toutes les routes (important pour Authorization)
-app.options('*', cors({
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
-    if (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
-      return cb(null, true);
-    }
-    if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-    return cb(new Error('Not allowed by CORS'));
-  },
-  methods: ['POST', 'GET', 'OPTIONS', 'DELETE', 'PATCH', 'PUT'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-}));
-
 // Compression HTTP (gzip/deflate)
 app.use(compression({ level: 6 }));
 
@@ -185,116 +92,6 @@ try {
     app.use('/assets', express.static(pubDir, { maxAge: '7d', etag: true, immutable: false }));
   }
 } catch {}
-
-// Auth admin par token (Authorization: Bearer BACKEND_TOKEN)
-app.use('/api/admin', (req, res, next) => {
-  try {
-    const t = String(TOKEN || '').trim();
-    if (!t) return next();
-    const auth = String(req.headers['authorization'] || '');
-    if (auth === `Bearer ${t}`) return next();
-    try { if (String(req.query?.token || '') === t) return next(); } catch {}
-    return res.status(401).json({ ok: false, error: 'unauthorized' });
-  } catch {
-    return res.status(401).json({ ok: false, error: 'unauthorized' });
-  }
-});
-
-// === Import CSV d'articles (arrière-plan) ===
-let __importWorkerStarted = false;
-async function startImportWorker() {
-  if (__importWorkerStarted) return; __importWorkerStarted = true;
-  setInterval(async () => {
-    try {
-      if (!MONGODB_URI) return; await initMongo();
-      const jobs = mongoDb.collection('blog_import_jobs');
-      const job = await jobs.findOne({ status: { $in: ['pending', 'running'] } });
-      if (!job) return;
-      const now = new Date().toISOString();
-      if (job.status !== 'running') {
-        await jobs.updateOne({ _id: job._id }, { $set: { status: 'running', updatedAt: now } });
-      }
-      const baseUrl = SERVER_LOCAL_127;
-      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` };
-      const total = Array.isArray(job.rows) ? job.rows.length : 0;
-      let idx = Number(job.progress || 0);
-      for (; idx < total; idx++) {
-        const r = job.rows[idx] || {};
-        const body = {
-          marque: String(r.marque || '').trim(),
-          code: String(r.code || '').trim(),
-          cylindree: String(r.cylindree || '').trim(),
-          carburant: String(r.carburant || '').trim(),
-          tags: Array.isArray(r.tags) ? r.tags : (String(r.tags || '').split(',').map(s=>s.trim()).filter(Boolean)),
-          rag: !!job.rag,
-          ragResults: Math.max(1, Math.min(3, parseInt(String(job.ragResults || '3'), 10) || 3)),
-          manualCompat: Array.isArray(r.compat) ? r.compat : (String(r.compat || '').split(/\||;|\n/).map(s=>s.trim()).filter(Boolean))
-        };
-        if (!body.marque || !body.code) {
-          await jobs.updateOne({ _id: job._id }, { $inc: { fail: 1 }, $set: { progress: idx + 1, updatedAt: new Date().toISOString() } });
-          continue;
-        }
-        try {
-          const res = await fetch(`${baseUrl}/api/admin/blog-posts/generate`, { method: 'POST', headers, body: JSON.stringify(body) });
-          if (res.ok) {
-            await jobs.updateOne({ _id: job._id }, { $inc: { success: 1 }, $set: { progress: idx + 1, updatedAt: new Date().toISOString() } });
-          } else {
-            await jobs.updateOne({ _id: job._id }, { $inc: { fail: 1 }, $set: { progress: idx + 1, updatedAt: new Date().toISOString() } });
-          }
-        } catch {
-          await jobs.updateOne({ _id: job._id }, { $inc: { fail: 1 }, $set: { progress: idx + 1, updatedAt: new Date().toISOString() } });
-        }
-        await sleep(800);
-      }
-      await jobs.updateOne({ _id: job._id }, { $set: { status: 'done', updatedAt: new Date().toISOString() } });
-    } catch (e) {
-      // silencieux
-    }
-  }, 3000);
-}
-
-app.post('/api/admin/blog-posts/import-csv', async (req, res) => {
-  try {
-    if (!MONGODB_URI) return res.status(503).json({ ok: false, error: 'mongo_not_configured' });
-    await initMongo();
-    const { csv = '', rag = true, ragResults = 3 } = (req.body || {});
-    const raw = String(csv || '');
-    if (!raw.trim()) return res.status(400).json({ ok: false, error: 'csv_empty' });
-    const lines = raw.split(/\r?\n/).filter(l => l.trim().length > 0);
-    if (lines.length < 2) return res.status(400).json({ ok: false, error: 'csv_no_rows' });
-    const headers = csvParseLine(lines[0]);
-    const keys = headers.map(h => String(h || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase());
-    const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-      const vals = csvParseLine(lines[i]);
-      const obj = {};
-      for (let k = 0; k < keys.length; k++) obj[keys[k]] = vals[k] || '';
-      rows.push(obj);
-    }
-    const now = new Date().toISOString();
-    const jobs = mongoDb.collection('blog_import_jobs');
-    const doc = { status: 'pending', progress: 0, total: rows.length, success: 0, fail: 0, rag: !!rag, ragResults: Math.max(1, Math.min(3, parseInt(String(ragResults || '3'), 10) || 3)), rows, createdAt: now, updatedAt: now };
-    const ins = await jobs.insertOne(doc);
-    return res.status(201).json({ ok: true, jobId: String(ins.insertedId) });
-  } catch (err) {
-    return res.status(500).json({ ok: false, error: 'csv_job_create_failed' });
-  }
-});
-
-app.get('/api/admin/blog-posts/import-jobs/:id', async (req, res) => {
-  try {
-    if (!MONGODB_URI) return res.status(503).json({ ok: false, error: 'mongo_not_configured' });
-    await initMongo();
-    const id = String(req.params.id || '');
-    const oid = new ObjectId(id);
-    const jobs = mongoDb.collection('blog_import_jobs');
-    const job = await jobs.findOne({ _id: oid });
-    if (!job) return res.status(404).json({ ok: false, error: 'not_found' });
-    return res.json({ ok: true, job: { id: String(job._id), status: job.status, progress: job.progress, total: job.total, success: job.success, fail: job.fail, updatedAt: job.updatedAt } });
-  } catch {
-    return res.status(500).json({ ok: false, error: 'csv_job_status_failed' });
-  }
-});
 
 // Normalisation d'URL (anti-duplicate) + redirections depuis la base
 app.use(async (req, res, next) => {
@@ -585,82 +382,6 @@ async function ensureBlogIndexes() {
   const col = mongoDb.collection('blog_posts');
   try { await col.createIndex({ slug: 1 }, { unique: true }); } catch {}
   try { await col.createIndex({ status: 1, publishedAt: -1 }); } catch {}
-}
-
-// HTTPS direct (fallback): résout IPv4 et force SNI + Host pour API OpenAI
-function httpsJsonRequest({ hostname, path, method = 'GET', headers = {}, body = '' }) {
-  return new Promise(async (resolve) => {
-    try {
-      const ips = await dns.promises.resolve4(hostname);
-      const ip = ips && ips[0];
-      if (!ip) return resolve({ ok: false, status: 0, err: 'no_ipv4' });
-      const req = https.request({
-        host: ip,
-        port: 443,
-        method,
-        path,
-        servername: hostname, // SNI
-        headers: { ...headers, Host: hostname, Connection: 'close' },
-      }, (res) => {
-        const chunks = [];
-        res.on('data', (d) => chunks.push(d));
-        res.on('end', () => {
-          const buf = Buffer.concat(chunks);
-          const txt = buf.toString('utf8');
-          let data = null;
-          try { data = JSON.parse(txt); } catch {}
-          resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data, text: txt });
-        });
-      });
-      req.on('error', (err) => resolve({ ok: false, status: 0, err: String(err?.message || err) }));
-      // Timeout du fallback HTTPS direct raccourci pour tenir sous la limite globale
-      req.setTimeout(20000, () => { try { req.destroy(new Error('timeout')); } catch {} });
-      if (body) req.write(body);
-      req.end();
-    } catch (e) {
-      resolve({ ok: false, status: 0, err: String(e?.message || e) });
-    }
-  });
-}
-
-// Helper: appel OpenAI via fetch (undici) puis fallback HTTPS direct si nécessaire
-async function callChat(apiBase, apiKey, body) {
-  const base = String(apiBase || '').replace(/\/$/, '');
-  const url = `${base}/chat/completions`;
-  const controller = new AbortController();
-  // Première tentative (fetch standard) limitée à ~8s pour basculer vite sur le fallback si besoin
-  const to = setTimeout(() => { try { controller.abort(new Error('timeout')); } catch {} }, 8000);
-  try {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Connection': 'close' },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    clearTimeout(to);
-    if (!r.ok) {
-      let errText = '';
-      try { errText = await r.text(); } catch {}
-      return { ok: false, errText: errText || `status_${r.status}` };
-    }
-    let data = null;
-    try { data = await r.json(); } catch {}
-    if (!data) return { ok: false, errText: 'invalid_json' };
-    return { ok: true, data };
-  } catch (e) {
-    clearTimeout(to);
-    // Fallback HTTPS direct
-    try {
-      const u = new URL(base);
-      const pth = (u.pathname.replace(/\/$/, '') || '') + '/chat/completions';
-      const payload = JSON.stringify(body);
-      const resp = await httpsJsonRequest({ hostname: u.hostname, path: pth, method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` }, body: payload });
-      if (!resp.ok) return { ok: false, errText: resp.text || resp.err || 'ai_call_failed' };
-      return { ok: true, data: resp.data };
-    } catch (ee) {
-      return { ok: false, errText: String(ee?.message || ee) };
-    }
-  }
 }
 
 async function ensureRedirectsIndexes() {
@@ -1449,13 +1170,11 @@ app.post('/api/admin/blog-posts/generate', async (req, res) => {
     const FALLBACK_MODEL = (process.env.AI_MODEL_FALLBACK || 'gpt-4o').trim();
     const MAX_TOKENS = Number(process.env.AI_MAX_TOKENS || 3500);
     const TEMPERATURE = Number(process.env.AI_TEMPERATURE || 0.3);
-    let FAST = (String(process.env.AI_FAST_MODE || '').trim() === '1') || (String(req.query?.fast || '').trim() === '1');
     if (!API_BASE || !API_KEY || !PRIMARY_MODEL) return res.status(503).json({ ok: false, error: 'ai_not_configured' });
 
     await initMongo();
     await ensureBlogIndexes();
     const b = req.body || {};
-    if (!FAST) { try { if (b && b.fast === true) FAST = true; } catch {} }
     const marque = String(b.marque || '').trim();
     const code = String(b.code || '').trim();
     const cylindree = String(b.cylindree || '').trim();
@@ -1498,7 +1217,7 @@ app.post('/api/admin/blog-posts/generate', async (req, res) => {
 
     let sourcesCtx = '';
     try {
-      const ragEnabled = (!FAST) && (b.rag !== false) && Boolean(process.env.SERPAPI_KEY && process.env.FIRECRAWL_API_KEY);
+      const ragEnabled = (b.rag !== false) && Boolean(process.env.SERPAPI_KEY && process.env.FIRECRAWL_API_KEY);
       if (ragEnabled) {
         const serpKey = String(process.env.SERPAPI_KEY || '').trim();
         const fcKey = String(process.env.FIRECRAWL_API_KEY || '').trim();
@@ -1570,9 +1289,7 @@ app.post('/api/admin/blog-posts/generate', async (req, res) => {
     } catch {}
     const extraHints = brandHints.length ? `\n\nPoints critiques à traiter:\n${brandHints.join('\n')}\n` : '';
 
-    const PROMPT_JSON = FAST ? `{"html":"..."}` : `{"title":"...","summary":"...","tags":["..."],"html":"..."}`;
-    const WORDS_HINT = FAST ? '800–1100' : '1500';
-    const userPrompt = `Réponds en JSON strict ${PROMPT_JSON}. Écris ${WORDS_HINT} mots en HTML SÉMANTIQUE UNIQUEMENT (aucun style, aucune classe, aucun <script>, aucune balise <style>, pas de <div> ni <span>, pas d'images). Balises autorisées: h2,h3,p,ul,ol,li,table,thead,tbody,tr,th,td,details,summary,strong,em,a.
+    const userPrompt = `Réponds en JSON strict {"title":"...","summary":"...","tags":["..."],"html":"..."}. Écris ~1500 mots en HTML SÉMANTIQUE UNIQUEMENT (aucun style, aucune classe, aucun <script>, aucune balise <style>, pas de <div> ni <span>, pas d'images). Balises autorisées: h2,h3,p,ul,ol,li,table,thead,tbody,tr,th,td,details,summary,strong,em,a.
 
 Structure OBLIGATOIRE du HTML (H1 géré par le template, NE PAS inclure de H1):
 - h2 « Résumé / Vue d’ensemble » (150–200 mots)
@@ -1596,21 +1313,17 @@ ${sourcesCtx || '(aucune)'}
 Données internes:
 ${JSON.stringify(data)}`;
 
-    const models = (() => {
-      const arr = Array.from(new Set([PRIMARY_MODEL, FALLBACK_MODEL].filter(Boolean)));
-      if (FAST) {
-        try { arr.sort((a, b) => (String(a).includes('mini') ? -1 : 1)); } catch {}
-      }
-      return arr;
-    })();
-    const MAX_TOKENS_EFF = FAST ? Math.min(MAX_TOKENS, 1600) : MAX_TOKENS;
+    const models = Array.from(new Set([PRIMARY_MODEL, FALLBACK_MODEL].filter(Boolean)));
     try { console.log('[ai] sourcesLen=%d dataLen=%d', sourcesCtx.length || 0, JSON.stringify(data).length); } catch {}
     let j = null, lastTxt = '';
     for (const m of models) {
-      const body = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS_EFF, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: sys }, { role: 'user', content: userPrompt } ] };
-      const resp = await callChat(API_BASE, API_KEY, body);
-      if (!resp.ok) { lastTxt = resp.errText || ''; continue; }
-      j = resp.data;
+      const body = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: sys }, { role: 'user', content: userPrompt } ] };
+      let r;
+      try {
+        r = await fetch(`${API_BASE.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify(body) });
+      } catch (e) { lastTxt = `network: ${e?.message || e}`; continue; }
+      if (!r.ok) { const t = await r.text().catch(()=> ''); lastTxt = `${r.status} ${r.statusText} :: ${t}`; continue; }
+      j = await r.json();
       break;
     }
     if (!j) {
@@ -1643,7 +1356,7 @@ ${JSON.stringify(data)}`;
     if (!finalHtml) return res.status(502).json({ ok: false, error: 'ai_empty' });
     let wc = wordCountFromHtml(finalHtml);
     console.log('[ai] wc_initial=%d', wc);
-    if (!FAST && wc < 1200) {
+    if (wc < 1200) {
       try {
         for (let pass = 0; pass < 3 && wc < 1200; pass++) {
           console.log('[ai] augment_pass=%d wc=%d', pass + 1, wc);
@@ -1659,10 +1372,13 @@ Article actuel (HTML):
 ${finalHtml}`;
           let j2 = null, last2 = '';
           for (const m of models) {
-            const body2 = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS_EFF, messages: [ { role: 'system', content: sys }, { role: 'user', content: augmentUser } ] };
-            const resp2 = await callChat(API_BASE, API_KEY, body2);
-            if (!resp2.ok) { last2 = resp2.errText || ''; continue; }
-            j2 = resp2.data;
+            const body2 = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, messages: [ { role: 'system', content: sys }, { role: 'user', content: augmentUser } ] };
+            let r2;
+            try {
+              r2 = await fetch(`${API_BASE.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify(body2) });
+            } catch (e) { last2 = `network: ${e?.message || e}`; continue; }
+            if (!r2.ok) { const t2 = await r2.text().catch(()=> ''); last2 = `${r2.status} ${r2.statusText} :: ${t2}`; continue; }
+            j2 = await r2.json();
             break;
           }
           if (j2) {
@@ -1687,7 +1403,7 @@ ${finalHtml}`;
           }
         }
         // Force expand si encore trop court
-        if (!FAST && wc < 1200) {
+        if (wc < 1200) {
           try {
             const forceUser = `Complète et développe l'article pour atteindre 1400–1700 mots en renforçant « Pannes spécifiques » et « FAQ ». Garde la même structure sémantique (aucun style/classe/<div>/<span>/<style>/<script>), ajoute du détail concret (symptômes → causes → risques → solutions). Réponds en JSON strict {"html":"..."}.
 
@@ -1697,10 +1413,13 @@ Article actuel (HTML):
 ${finalHtml}`;
             let jf = null, lastf = '';
             for (const m of models) {
-              const bodyf = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS_EFF, messages: [ { role: 'system', content: sys }, { role: 'user', content: forceUser } ] };
-              const respf = await callChat(API_BASE, API_KEY, bodyf);
-              if (!respf.ok) { lastf = respf.errText || ''; continue; }
-              jf = respf.data;
+              const bodyf = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, messages: [ { role: 'system', content: sys }, { role: 'user', content: forceUser } ] };
+              let rf;
+              try {
+                rf = await fetch(`${API_BASE.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify(bodyf) });
+              } catch (e) { lastf = `network: ${e?.message || e}`; continue; }
+              if (!rf.ok) { const tf = await rf.text().catch(()=> ''); lastf = `${rf.status} ${rf.statusText} :: ${tf}`; continue; }
+              jf = await rf.json();
               break;
             }
             if (jf) {
@@ -1736,25 +1455,13 @@ ${finalHtml}`;
     // Contrôle qualité
     const qc = validateArticleHtml(finalHtml);
 
-    const slugBase = slugify(title || `${marque} ${code}`).slice(0, 200);
+    const slugBase = title || `${marque} ${code}`;
+    const slug = slugify(slugBase).slice(0, 200);
     const now = new Date().toISOString();
     const col = mongoDb.collection('blog_posts');
-    let finalSlug = slugBase;
-    const baseDoc = { title, summary: fixedSummary, contentHtml: finalHtml, image: '', tags: outTags, status: 'draft', noindex: true, publishedAt: null, createdAt: now, updatedAt: now, sources: [], quality: qc };
-    let ins = null;
-    for (let i = 0; i < 50; i++) {
-      const candidate = (i === 0 ? slugBase : `${slugBase}-${i}`).slice(0, 200);
-      try {
-        ins = await col.insertOne({ ...baseDoc, slug: candidate });
-        finalSlug = candidate;
-        break;
-      } catch (e) {
-        if (e && e.code === 11000) { continue; }
-        throw e;
-      }
-    }
-    if (!ins) return res.status(409).json({ ok: false, error: 'duplicate_slug' });
-    return res.status(201).json({ ok: true, id: String(ins.insertedId), slug: finalSlug, qc });
+    const doc = { title, slug, summary: fixedSummary, contentHtml: finalHtml, image: '', tags: outTags, status: 'draft', noindex: true, publishedAt: null, createdAt: now, updatedAt: now, sources: [], quality: qc };
+    const ins = await col.insertOne(doc);
+    return res.status(201).json({ ok: true, id: String(ins.insertedId), slug, qc });
   } catch (err) {
     const msg = (err && (err.message || String(err))) ? String(err.message || err) : '';
     console.error('[blog] ai generate error:', msg);
@@ -1980,6 +1687,35 @@ ${baseHtml}`;
       }
     }
 
+    if (brandHints.length && !/cylindres\s*ray[ée]s|cylinder\s*scoring/i.test(finalHtml || '')) {
+      const scoringUser = `Ajoute une section H3 "Cylindres rayés (scoring)" avec symptômes, causes (Lokasil), diagnostic (endoscopie + compression), risques, solutions et prévention. Réponds en JSON strict {\"html\":\"...\"}.\n\nArticle actuel (HTML):\n${finalHtml}`;
+      let js = null; let lasts = '';
+      for (const m of models) {
+        const bodys = { model: m, temperature: Math.min(TEMPERATURE, 0.15), max_tokens: MAX_TOKENS, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: sys }, { role: 'user', content: scoringUser } ] };
+        const rs2 = await fetch(`${API_BASE.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify(bodys) });
+        if (!rs2.ok) { lasts = await rs2.text().catch(()=> ''); continue; }
+        js = await rs2.json();
+        break;
+      }
+      if (js) {
+        const cs = js?.choices?.[0]?.message?.content || '';
+        try {
+          let os = null;
+          try { os = JSON.parse(cs); }
+          catch {
+            const cleaneds = String(cs || '').replace(/```json|```/gi, '').trim();
+            const fs = cleaneds.indexOf('{');
+            const ls = cleaneds.lastIndexOf('}');
+            if (fs !== -1 && ls !== -1 && ls > fs) os = JSON.parse(cleaneds.slice(fs, ls + 1));
+          }
+          if (os && os.html) {
+            finalHtml = String(os.html || '').trim();
+            wc = wordCountFromHtml(finalHtml);
+          }
+        } catch {}
+      }
+    }
+
     // Réécriture stricte des compatibilités dans le HTML
     try { finalHtml = rewriteCompatSections(finalHtml, compatEff); } catch {}
     // Garanties obligatoires: FAQ et meta description 140–160
@@ -2153,126 +1889,6 @@ app.get('/api/public/seo-check', async (req, res) => {
   } catch (e) {
     console.error('[seo-check] error', e);
     res.status(500).json({ ok: false });
-  }
-});
-
-// === Diagnostics réseau (DNS/TLS) ===
-app.get('/api/admin/diag/dns', async (req, res) => {
-  try {
-    const out = { openai: {}, mongo: {} };
-    const openaiHost = 'api.openai.com';
-    try {
-      const [a4, a6, lu] = await Promise.all([
-        dns.promises.resolve4(openaiHost).catch((e)=>({ error: String(e.message || e) })),
-        dns.promises.resolve6(openaiHost).catch((e)=>({ error: String(e.message || e) })),
-        new Promise((r)=> dns.lookup(openaiHost, { all: true }, (err, addr)=> r(err ? { error: String(err.message || err) } : { addrs: addr })))
-      ]);
-      out.openai = { resolve4: a4, resolve6: a6, lookupAll: lu };
-    } catch {}
-
-    // Résolution MongoDB (SRV ou hôtes directs)
-    try {
-      const uri = String(MONGODB_URI || '');
-      if (!uri) out.mongo = { configured: false };
-      else if (uri.startsWith('mongodb+srv://')) {
-        const m = uri.match(/^mongodb\+srv:\/\/[^@]+@?([^/?#]+)(?:[/?#].*)?$/i) || uri.match(/^mongodb\+srv:\/\/[^/]+\/\/([^/?#]+)(?:[/?#].*)?$/i);
-        const domain = m ? m[1] : uri.replace(/^mongodb\+srv:\/\//i, '').split('/')[0];
-        const srv = await dns.promises.resolveSrv(`_mongodb._tcp.${domain}`).catch((e)=>({ error: String(e.message || e) }));
-        const targets = Array.isArray(srv) ? srv.map((s)=>s.name) : [];
-        const r4 = {}; const r6 = {};
-        for (const h of targets.slice(0, 3)) {
-          r4[h] = await dns.promises.resolve4(h).catch((e)=>({ error: String(e.message || e) }));
-          r6[h] = await dns.promises.resolve6(h).catch((e)=>({ error: String(e.message || e) }));
-        }
-        out.mongo = { srvDomain: domain, srvRecords: srv, resolve4: r4, resolve6: r6 };
-      } else {
-        const hostsStr = uri.replace(/^mongodb:\/\//i, '').split('@').pop() || '';
-        const hosts = (hostsStr.split('/')[0] || '').split(',').map((h)=> h.trim().split(':')[0]).filter(Boolean);
-        const r4 = {}; const r6 = {};
-        for (const h of hosts.slice(0, 3)) {
-          r4[h] = await dns.promises.resolve4(h).catch((e)=>({ error: String(e.message || e) }));
-          r6[h] = await dns.promises.resolve6(h).catch((e)=>({ error: String(e.message || e) }));
-        }
-        out.mongo = { hosts, resolve4: r4, resolve6: r6 };
-      }
-    } catch {}
-
-    return res.json({ ok: true, dns: out, node: { version: process.version, ipv4First: true } });
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: 'diag_dns_failed', details: String(e?.message || e).slice(0, 400) });
-  }
-});
-
-app.get('/api/admin/diag/ping-ai', async (req, res) => {
-  try {
-    const API_BASE = (process.env.AI_API_BASE || '').trim();
-    const API_KEY = (process.env.AI_API_KEY || '').trim();
-    if (!API_BASE || !API_KEY) return res.status(503).json({ ok: false, error: 'ai_not_configured' });
-    const baseNoSlash = API_BASE.replace(/\/$/, '');
-    const url = `${baseNoSlash}/models`;
-    // 1) Essai avec undiciFetch si dispo, sinon fetch global
-    try {
-      const fetchFn = (typeof undiciFetch === 'function') ? undiciFetch : (typeof fetch === 'function' ? fetch : null);
-      if (!fetchFn) throw new Error('no_fetch_available');
-      const r = await fetchFn(url, { method: 'GET', headers: { Authorization: `Bearer ${API_KEY}`, Connection: 'close' } });
-      const ct = String(r.headers.get('content-type') || '').toLowerCase();
-      let bodyType = 'text';
-      try { if (ct.includes('application/json')) bodyType = 'json'; } catch {}
-      let probe = null;
-      if (String(req.query.probe || '') === '1') {
-        try {
-          const pr = await fetchFn('https://www.google.com/generate_204', { method: 'GET', headers: { Connection: 'close' } });
-          probe = { ok: pr.ok, status: pr.status };
-        } catch (pe) {
-          probe = { ok: false, error: String(pe?.message || pe) };
-        }
-      }
-      return res.json({ ok: r.ok, status: r.status, bodyType, probe });
-    } catch (e) {
-      // 2) Fallback HTTPS direct (IPv4 + SNI) sur /models
-      try {
-        const u = new URL(baseNoSlash);
-        const pth = (u.pathname.replace(/\/$/, '') || '') + '/models';
-        const resp = await httpsJsonRequest({ hostname: u.hostname, path: pth, method: 'GET', headers: { Authorization: `Bearer ${API_KEY}` } });
-        if (resp && typeof resp.status === 'number') {
-          return res.json({ ok: resp.ok, status: resp.status, bodyType: (resp.data ? 'json' : 'text'), fallback: true });
-        }
-      } catch (fe) {
-        // ignore, we will return below
-      }
-      const det = {
-        message: String(e?.message || e),
-        code: e?.code,
-        errno: e?.errno,
-        syscall: e?.syscall,
-        address: e?.address,
-        port: e?.port,
-        cause: e?.cause ? { message: e?.cause?.message, code: e?.cause?.code, errno: e?.cause?.errno } : undefined,
-      };
-      return res.status(502).json({ ok: false, error: 'ai_tls_failed', details: det });
-    }
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: 'diag_ai_failed', details: String(e?.message || e).slice(0, 400) });
-  }
-});
-
-app.get('/api/admin/diag/ping-mongo', async (req, res) => {
-  try {
-    if (!MONGODB_URI) return res.status(503).json({ ok: false, error: 'mongo_not_configured' });
-    const opts = { serverSelectionTimeoutMS: 7000 };
-    const cli = new MongoClient(MONGODB_URI, opts);
-    try {
-      await cli.connect();
-      const db = cli.db(MONGODB_DB);
-      const pong = await db.command({ ping: 1 });
-      try { await cli.close(); } catch {}
-      return res.json({ ok: true, pong });
-    } catch (e) {
-      try { await cli.close(); } catch {}
-      return res.status(502).json({ ok: false, error: 'mongo_tls_failed', details: String(e?.message || e).slice(0, 400) });
-    }
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: 'diag_mongo_failed', details: String(e?.message || e).slice(0, 400) });
   }
 });
 

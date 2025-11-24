@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
@@ -309,15 +309,11 @@ const AdminBlogPosts: React.FC = () => {
   const [csvRows, setCsvRows] = useState<string[][]>([]);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvLoading, setCsvLoading] = useState(false);
-  const [csvRaw, setCsvRaw] = useState('');
   const [batchRunning, setBatchRunning] = useState(false);
   const [batchIndex, setBatchIndex] = useState(0);
   const [batchTotal, setBatchTotal] = useState(0);
   const [batchSuccess, setBatchSuccess] = useState<number>(0);
   const [batchFail, setBatchFail] = useState<number>(0);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<string | null>(null);
-  const pollRef = useRef<any>(null);
 
   const parseCsvLine = useCallback((line: string) => {
     const out: string[] = []; let cur = ''; let q = false;
@@ -342,7 +338,6 @@ const AdminBlogPosts: React.FC = () => {
     try {
       setCsvLoading(true);
       const text = await f.text();
-      setCsvRaw(text);
       const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
       if (lines.length < 2) { setCsvError('CSV vide.'); return; }
       const headers = parseCsvLine(lines[0]);
@@ -354,62 +349,6 @@ const AdminBlogPosts: React.FC = () => {
     } catch {
       setCsvError('Lecture CSV impossible.');
     } finally { setCsvLoading(false); }
-  };
-
-  const stopPoll = () => { if (pollRef.current) { clearTimeout(pollRef.current); pollRef.current = null; } };
-  const schedulePoll = (fn: () => void, ms = 2000) => { stopPoll(); pollRef.current = setTimeout(fn, ms); };
-
-  const pollJob = useCallback(async (id: string) => {
-    try {
-      const res = await fetch(`${base}/api/admin/blog-posts/import-jobs/${encodeURIComponent(id)}`, { headers, credentials: 'include' });
-      const data = await res.json().catch(()=>({}));
-      if (!res.ok) { schedulePoll(()=>pollJob(id), 3000); return; }
-      const j = data?.job || {};
-      setJobStatus(j.status || null);
-      setBatchIndex(Number(j.progress || 0));
-      setBatchTotal(Number(j.total || 0));
-      setBatchSuccess(Number(j.success || 0));
-      setBatchFail(Number(j.fail || 0));
-      if (j.status === 'done') {
-        stopPoll();
-        setTimeout(()=>{ setJobId(null); setJobStatus(null); localStorage.removeItem('blogCsvJobId'); }, 2000);
-        await load(1);
-      } else {
-        schedulePoll(()=>pollJob(id), 2000);
-      }
-    } catch {
-      schedulePoll(()=>pollJob(id), 4000);
-    }
-  }, [base, headers, load]);
-
-  useEffect(() => {
-    // reprise d’un job en cours après refresh
-    const saved = localStorage.getItem('blogCsvJobId');
-    if (saved && !jobId) {
-      setJobId(saved);
-      setJobStatus('running');
-      schedulePoll(()=>pollJob(saved), 0);
-    }
-    return () => stopPoll();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const startBackgroundImport = async () => {
-    setCsvError(null);
-    if (!csvRaw.trim()) { setCsvError('Aucun CSV chargé.'); return; }
-    try {
-      const body = { csv: csvRaw, rag: ragEnabled, ragResults } as any;
-      const res = await fetch(`${base}/api/admin/blog-posts/import-csv`, { method: 'POST', headers, credentials: 'include', body: JSON.stringify(body) });
-      const data = await res.json().catch(()=>({}));
-      if (!res.ok) { setCsvError(data?.error || 'Création du job impossible.'); return; }
-      const id = String(data?.jobId || '');
-      if (!id) { setCsvError('Réponse invalide (jobId manquant).'); return; }
-      setJobId(id); setJobStatus('pending'); localStorage.setItem('blogCsvJobId', id);
-      setBatchIndex(0); setBatchTotal(csvRows.length); setBatchSuccess(0); setBatchFail(0);
-      schedulePoll(()=>pollJob(id), 500);
-    } catch {
-      setCsvError('Erreur réseau lors de la création du job.');
-    }
   };
 
   const runBatch = async () => {
@@ -567,19 +506,16 @@ const AdminBlogPosts: React.FC = () => {
           </Box>
         )}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-          <Button variant="contained" color="secondary" onClick={startBackgroundImport} disabled={!csvHeaders.length || !csvRows.length || !!jobId}>
-            {jobId ? 'Job en cours…' : 'Lancer en arrière‑plan (recommandé)'}
-          </Button>
-          <Button variant="outlined" onClick={runBatch} disabled={!csvHeaders.length || !csvRows.length || batchRunning}>
-            {batchRunning ? 'Exécution locale…' : 'Exécuter dans cette page'}
+          <Button variant="contained" color="secondary" onClick={runBatch} disabled={!csvHeaders.length || !csvRows.length || batchRunning}>
+            {batchRunning ? 'Création en lot…' : 'Lancer la création en lot'}
           </Button>
           {!!batchTotal && (
             <Typography variant="body2" color="text.secondary">
-              {jobId ? `Job ${jobId.slice(-6)} — ` : ''}Statut: {jobStatus || (batchRunning ? 'en cours' : '—')} · {batchIndex}/{batchTotal} · OK: {batchSuccess} · Échecs: {batchFail}
+              Progression: {batchIndex}/{batchTotal} — Succès: {batchSuccess} — Échecs: {batchFail}
             </Typography>
           )}
         </Stack>
-        {(jobId || batchRunning) && (
+        {batchRunning && (
           <Box sx={{ mt: 1 }}>
             <LinearProgress variant="determinate" value={batchTotal ? Math.min(100, Math.round((batchIndex / batchTotal) * 100)) : 0} />
           </Box>
