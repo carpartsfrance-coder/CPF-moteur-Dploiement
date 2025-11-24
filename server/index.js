@@ -118,6 +118,20 @@ app.get('/api/public/test-admin-token', (req, res) => {
   }
 });
 
+app.get('/api/admin/diag/ai-config', (req, res) => {
+  try {
+    const raw = String(process.env.AI_API_BASE || '');
+    const base = raw.trim();
+    let host = '', pathn = '';
+    try { const u = new URL(base.replace(/\/$/, '')); host = u.hostname; pathn = u.pathname; } catch {}
+    const model = String(process.env.AI_MODEL || '').trim();
+    const fallback = String(process.env.AI_MODEL_FALLBACK || '').trim();
+    return res.json({ ok: true, base, baseLen: base.length, host, path: pathn, model, fallback });
+  } catch (e) {
+    return res.status(500).json({ ok: false });
+  }
+});
+
 // Pré‑vol explicite pour toutes les routes (important pour Authorization)
 app.options('*', cors({
   origin: (origin, cb) => {
@@ -611,8 +625,9 @@ async function callChat(apiBase, apiKey, body) {
     // Fallback HTTPS direct
     try {
       const u = new URL(base);
+      const pth = (u.pathname.replace(/\/$/, '') || '') + '/chat/completions';
       const payload = JSON.stringify(body);
-      const resp = await httpsJsonRequest({ hostname: u.hostname, path: '/chat/completions', method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` }, body: payload });
+      const resp = await httpsJsonRequest({ hostname: u.hostname, path: pth, method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` }, body: payload });
       if (!resp.ok) return { ok: false, errText: resp.text || resp.err || 'ai_call_failed' };
       return { ok: true, data: resp.data };
     } catch (ee) {
@@ -2208,7 +2223,8 @@ app.get('/api/admin/diag/ping-ai', async (req, res) => {
       // 2) Fallback HTTPS direct (IPv4 + SNI) sur /models
       try {
         const u = new URL(baseNoSlash);
-        const resp = await httpsJsonRequest({ hostname: u.hostname, path: '/models', method: 'GET', headers: { Authorization: `Bearer ${API_KEY}` } });
+        const pth = (u.pathname.replace(/\/$/, '') || '') + '/models';
+        const resp = await httpsJsonRequest({ hostname: u.hostname, path: pth, method: 'GET', headers: { Authorization: `Bearer ${API_KEY}` } });
         if (resp && typeof resp.status === 'number') {
           return res.json({ ok: resp.ok, status: resp.status, bodyType: (resp.data ? 'json' : 'text'), fallback: true });
         }
