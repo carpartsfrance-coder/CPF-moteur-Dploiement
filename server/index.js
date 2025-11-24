@@ -535,33 +535,31 @@ async function ensureBlogIndexes() {
   try { await col.createIndex({ status: 1, publishedAt: -1 }); } catch {}
 }
 
-// Helper: appel OpenAI en forçant IPv4 (HTTPS Agent)
+// Helper: appel OpenAI via fetch (undici), IPv4/H1 forcés par setGlobalDispatcher
 async function callChat(apiBase, apiKey, body) {
   const url = `${String(apiBase || '').replace(/\/$/, '')}/chat/completions`;
+  const controller = new AbortController();
+  const to = setTimeout(() => { try { controller.abort(new Error('timeout')); } catch {} }, 28000);
   try {
-    const agent = new https.Agent({
-    keepAlive: false,
-    minVersion: 'TLSv1.2',
-    // Forcer IPv4 via lookup
-    lookup: (hostname, options, cb) => dns.lookup(hostname, { family: 4, all: false }, cb),
-  });
-    const res = await axios.post(url, body, {
+    const r = await fetch(url, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Connection': 'close' },
-      httpsAgent: agent,
-      timeout: 28000,
-      validateStatus: () => true,
-      transitional: { clarifyTimeoutError: true },
+      body: JSON.stringify(body),
+      signal: controller.signal,
     });
-    if (res.status < 200 || res.status >= 300) {
+    clearTimeout(to);
+    if (!r.ok) {
       let errText = '';
-      try { errText = typeof res.data === 'string' ? res.data : JSON.stringify(res.data); } catch {}
-      return { ok: false, errText: errText || `status_${res.status}` };
+      try { errText = await r.text(); } catch {}
+      return { ok: false, errText: errText || `status_${r.status}` };
     }
-    return { ok: true, data: res.data };
+    let data = null;
+    try { data = await r.json(); } catch {}
+    if (!data) return { ok: false, errText: 'invalid_json' };
+    return { ok: true, data };
   } catch (e) {
-    let errText = '';
-    try { errText = e?.response?.data ? JSON.stringify(e.response.data) : (e?.message || String(e)); } catch { errText = e?.message || 'ai_call_failed'; }
-    return { ok: false, errText };
+    clearTimeout(to);
+    return { ok: false, errText: String(e?.message || e) };
   }
 }
 
@@ -2134,9 +2132,27 @@ app.get('/api/admin/diag/ping-ai', async (req, res) => {
       const ct = String(r.headers.get('content-type') || '').toLowerCase();
       let bodyType = 'text';
       try { if (ct.includes('application/json')) bodyType = 'json'; } catch {}
-      return res.json({ ok: r.ok, status: r.status, bodyType });
+      let probe = null;
+      if (String(req.query.probe || '') === '1') {
+        try {
+          const pr = await fetch('https://www.google.com/generate_204', { method: 'GET', headers: { Connection: 'close' } });
+          probe = { ok: pr.ok, status: pr.status };
+        } catch (pe) {
+          probe = { ok: false, error: String(pe?.message || pe) };
+        }
+      }
+      return res.json({ ok: r.ok, status: r.status, bodyType, probe });
     } catch (e) {
-      return res.status(502).json({ ok: false, error: 'ai_tls_failed', details: String(e?.message || e).slice(0, 400) });
+      const det = {
+        message: String(e?.message || e),
+        code: e?.code,
+        errno: e?.errno,
+        syscall: e?.syscall,
+        address: e?.address,
+        port: e?.port,
+        cause: e?.cause ? { message: e?.cause?.message, code: e?.cause?.code, errno: e?.cause?.errno } : undefined,
+      };
+      return res.status(502).json({ ok: false, error: 'ai_tls_failed', details: det });
     }
   } catch (e) {
     return res.status(500).json({ ok: false, error: 'diag_ai_failed', details: String(e?.message || e).slice(0, 400) });
