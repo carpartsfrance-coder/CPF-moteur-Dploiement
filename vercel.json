@@ -2,8 +2,7 @@
   "version": 2,
   "functions": {
     "api/[...all].js": {
-      "includeFiles": "server/**",
-      "runtime": "vercel/node@3.0.0"
+      "includeFiles": "server/**"
     }
   },
   "routes": [
