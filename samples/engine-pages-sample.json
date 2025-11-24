@@ -1,0 +1,12 @@
+[
+  {"code":"M48.50","marque":"Porsche","cylindree":"4.5 V8","carburant":"Essence","annees":"2002-2007"},
+  {"code":"B58","marque":"BMW","cylindree":"3.0 6c","carburant":"Essence","annees":"2015-2023"},
+  {"code":"OM642","marque":"Mercedes","cylindree":"3.0 V6","carburant":"Diesel","annees":"2005-2020"},
+  {"code":"N47","marque":"BMW","cylindree":"2.0 4c","carburant":"Diesel","annees":"2007-2014"},
+  {"code":"K9K","marque":"Renault","cylindree":"1.5 dCi","carburant":"Diesel","annees":"2001-2020"},
+  {"code":"H5F","marque":"Renault","cylindree":"1.2 TCe","carburant":"Essence","annees":"2012-2019"},
+  {"code":"EB2","marque":"Peugeot","cylindree":"1.2 PureTech","carburant":"Essence","annees":"2013-2022"},
+  {"code":"CBAB","marque":"Volkswagen","cylindree":"2.0 TDI","carburant":"Diesel","annees":"2007-2012"},
+  {"code":"M271","marque":"Mercedes","cylindree":"1.8 Kompressor","carburant":"Essence","annees":"2002-2011"},
+  {"code":"2ZR-FE","marque":"Toyota","cylindree":"1.8 VVT-i","carburant":"Essence","annees":"2007-2020"}
+]

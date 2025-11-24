@@ -1,0 +1,45 @@
+/* Styles globaux blog (blog-*) */
+:root{
+  --blog-red:#d9534f;
+  --blog-red-dark:#c53030;
+  --blog-blue:#4299e1;
+  --blog-gold:#ecc94b;
+  --blog-text:#2d3748;
+  --blog-muted:#718096;
+  --blog-bg:#f7f7f7;
+  --blog-card-bg:#ffffff;
+  --blog-border:#e2e8f0;
+  --blog-radius:12px;
+  --blog-shadow:0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.blog-article-header{margin:10px 0 20px;padding-bottom:16px;border-bottom:1px solid var(--blog-border)}
+.blog-article-title{color:var(--blog-red);margin:0 0 8px;font-weight:800;letter-spacing:-0.02em;line-height:1.2;font-size:30px}
+@media(max-width:768px){.blog-article-title{font-size:24px}}
+.blog-article-subtitle{color:var(--blog-text);opacity:.9;font-size:16px;margin:0}
+/* Forcer la couleur rouge si le template cible .hero h1 */
+.hero h1.blog-article-title{color:var(--blog-red)}
+
+.blog-article-breadcrumb{font-size:14px;color:var(--blog-muted)}
+.blog-article-breadcrumb a{color:var(--blog-muted);text-decoration:none}
+.blog-article-breadcrumb a:hover{color:var(--blog-red);text-decoration:underline}
+
+.blog-section{background:var(--blog-card-bg);border:1px solid var(--blog-border);border-radius:var(--blog-radius);box-shadow:var(--blog-shadow);padding:24px;margin:18px 0}
+.blog-section-title{color:var(--blog-red);font-size:22px;font-weight:700;margin:0 0 12px;padding-bottom:10px;border-bottom:1px solid var(--blog-border);position:relative;letter-spacing:-0.01em}
+.blog-section-title::after{content:"";position:absolute;left:0;bottom:-1px;width:48px;height:3px;background:var(--blog-red);border-radius:3px}
+
+#article-content table,.blog-section table,.blog-table{width:100%;border-collapse:separate;border-spacing:0;margin:18px 0;border:1px solid var(--blog-border);border-radius:8px;overflow:hidden;font-size:15px;background:#fff}
+#article-content thead th,.blog-section thead th{background:var(--blog-red);color:#fff;text-transform:uppercase;font-size:13px;letter-spacing:.4px}
+#article-content th,#article-content td,.blog-section th,.blog-section td{padding:12px 14px;border-bottom:1px solid var(--blog-border);text-align:left}
+#article-content tr:nth-child(even),.blog-section tr:nth-child(even){background:#fafafa}
+
+.blog-faq details{border:1px solid var(--blog-border);border-radius:10px;padding:10px 14px;margin:10px 0;background:#fff}
+.blog-faq summary{cursor:pointer;font-weight:700;color:var(--blog-red);outline:none}
+
+.blog-cta{background:linear-gradient(135deg,var(--blog-red),var(--blog-red-dark));color:#fff;border-radius:14px;padding:28px;text-align:center;box-shadow:0 10px 15px rgba(217,83,79,0.15);margin:24px 0}
+.blog-cta h2{margin:0 0 10px;font-size:24px;font-weight:700}
+.blog-cta p{margin:0 0 16px}
+.blog-btn-primary{display:inline-block;background:#fff;color:var(--blog-red);font-weight:700;padding:10px 22px;border-radius:999px;text-decoration:none;transition:transform .15s ease,box-shadow .15s ease,background .15s ease;box-shadow:0 4px 8px rgba(0,0,0,0.08)}
+.blog-btn-primary:hover{background:#f7f7f7;transform:translateY(-2px);box-shadow:0 8px 14px rgba(0,0,0,0.1)}
+
+@media(max-width:768px){.blog-section{padding:18px}.blog-cta{padding:22px}.blog-btn-primary{display:block;width:100%}}

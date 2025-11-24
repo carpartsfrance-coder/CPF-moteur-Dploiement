@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <% if (description) { %><meta name="description" content="<%= description %>"><% } %>
+  <% if (canonical) { %><link rel="canonical" href="<%= canonical %>"><% } %>
+  <meta property="og:title" content="<%= title %>">
+  <% if (description) { %><meta property="og:description" content="<%= description %>"><% } %>
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="<%= canonical %>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<%= title %>">
+  <% if (description) { %><meta name="twitter:description" content="<%= description %>"><% } %>
+
+  <script type="application/ld+json">
+  <%- JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    itemListElement: (items||[]).map((it, idx) => ({
+      '@type': 'ListItem', position: idx + 1,
+      name: it.title || (`Moteur ${it.code} — ${it.marque} ${it.cylindree||''}`.trim()),
+      url: (origin || '') + (it.brandSlug && it.modelSlug && it.codeSlug
+        ? `/moteur/${encodeURIComponent(it.brandSlug)}/${encodeURIComponent(it.modelSlug)}/${encodeURIComponent(it.codeSlug)}`
+        : `/codes-moteur/${encodeURIComponent(it.slug)}`)
+    }))
+  }) %>
+  </script>
+
+  <style>
+    body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0;color:#0f172a;background:#f8fafc}
+    .container{max-width:1040px;margin:0 auto;padding:24px}
+    .title{font-size:30px;line-height:1.15;margin:0 0 8px;font-weight:800;color:#0f172a}
+    .desc{color:#475569;margin:0 0 12px}
+    .grid{display:grid;gap:16px;grid-template-columns:1fr}
+    @media(min-width:960px){.grid{grid-template-columns:repeat(3,1fr)}}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 8px 28px rgba(15,23,42,0.06);padding:16px}
+    .meta{color:#475569;font-size:12px;margin-bottom:8px}
+    .btn{display:inline-block;margin-top:8px;text-decoration:none;color:#0f172a;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;background:#fff}
+    .pagination{margin-top:16px;display:flex;gap:8px}
+    .pagination a{padding:8px 12px;border:1px solid #e2e8f0;border-radius:10px;text-decoration:none;color:#0f172a;background:#fff}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav style="font-size:13px;color:#475569;margin-bottom:8px">
+      <a href="/" style="color:#475569;text-decoration:none">Accueil</a>
+      <span> / </span>
+      <a href="/moteurs" style="color:#475569;text-decoration:none">Moteurs</a>
+      <span> / </span>
+      <span><%= brand %></span>
+    </nav>
+    <h1 class="title">Moteurs <%= brand %></h1>
+    <% if (description) { %><p class="desc"><%= description %></p><% } %>
+
+    <div class="grid">
+      <% (items||[]).forEach(function(it){ %>
+        <div class="card">
+          <h2 style="margin:0 0 6px;font-size:18px"><%= it.code %> — <%= it.marque %></h2>
+          <div class="meta">
+            <%= it.cylindree || '' %> <%= it.carburant ? ' • ' + it.carburant : '' %> <%= it.annees ? ' • ' + it.annees : '' %>
+          </div>
+          <a class="btn" href="<%= (it.brandSlug && it.modelSlug && it.codeSlug) ? (`/moteur/${it.brandSlug}/${it.modelSlug}/${it.codeSlug}`) : (`/codes-moteur/${it.slug}`) %>">Voir la fiche</a>
+        </div>
+      <% }) %>
+    </div>
+
+    <% if (total && limit) { const max = Math.ceil(total/limit); if (max > 1) { %>
+      <div class="pagination">
+        <% if (page > 1) { %>
+          <a href="<%= pathUrl %>?page=<%= page-1 %>&limit=<%= limit %>">← Précédent</a>
+        <% } %>
+        <% if (page < max) { %>
+          <a href="<%= pathUrl %>?page=<%= page+1 %>&limit=<%= limit %>">Suivant →</a>
+        <% } %>
+      </div>
+    <% } } %>
+  </div>
+</body>
+</html>

@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <% if (description) { %><meta name="description" content="<%= description %>"><% } %>
+  <% if (canonical) { %><link rel="canonical" href="<%= canonical %>"><% } %>
+  <% if (typeof noindex !== 'undefined' && noindex) { %><meta name="robots" content="noindex,nofollow"><% } %>
+
+  <% if (ogImage) { %>
+    <meta property="og:image" content="<%= ogImage %>">
+    <meta name="twitter:image" content="<%= ogImage %>">
+  <% } %>
+  <meta property="og:title" content="<%= title %>">
+  <% if (description) { %><meta property="og:description" content="<%= description %>"><% } %>
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="<%= canonical %>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<%= title %>">
+  <% if (description) { %><meta name="twitter:description" content="<%= description %>"><% } %>
+  <% if (gsc) { %><meta name="google-site-verification" content="<%= gsc %>"><% } %>
+
+  <link rel="stylesheet" href="/assets/blog.css">
+
+  <script type="application/ld+json">
+  <%- JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: title,
+    description: description,
+    image: ogImage || undefined,
+    datePublished: post?.publishedAt || undefined,
+    dateModified: post?.updatedAt || undefined,
+    mainEntityOfPage: canonical,
+    author: post?.author || 'Car Parts France',
+    publisher: {
+      '@type': 'Organization',
+      name: 'Car Parts France'
+    }
+  }) %>
+  </script>
+
+  <% if (canonical) { %>
+  <script type="application/ld+json">
+  <%- JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: (origin || '').replace(/\/$/, '/') },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: (origin || '') + '/blog' },
+      { '@type': 'ListItem', position: 3, name: (post?.title || title), item: canonical }
+    ]
+  }) %>
+  </script>
+  <% } %>
+
+  <style>
+    :root{
+      --color-primary:#e63946; /* rouge cpfmoteur */
+      --color-primary-2:#ff6b6b; /* dégradé clair */
+      --color-primary-dark:#d92c3a;
+      --color-background:#f8fafc;
+      --color-card-bg:#ffffff;
+      --color-border-light:#e5e7eb;
+      --color-text-main:#0f172a;
+      --color-text-muted:#6b7280;
+    }
+    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;margin:0;color:var(--color-text-main);background:var(--color-background);font-size:16px;line-height:1.6;font-weight:400}
+    .container{max-width:1500px;margin:0 auto;padding:24px}
+    /* Header & Footer (aligné à la home) */
+    .site-header{position:sticky;top:0;z-index:50;background:#ffffffcc;backdrop-filter:saturate(140%) blur(6px);border-bottom:1px solid #e2e8f0}
+    .site-header .inner{max-width:1500px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:16px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;color:#0f172a;text-decoration:none}
+    .brand .logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#e63946,#ff6b6b)}
+    .site-nav{margin-left:auto;display:flex;gap:12px;align-items:center}
+    .site-nav a{color:var(--color-text-main);text-decoration:none;padding:8px 10px;border-radius:10px}
+    .site-nav a:hover{background:#f1f5f9}
+    .nav-cta{background:linear-gradient(90deg,var(--color-primary),var(--color-primary-2));color:#fff !important}
+    .nav-cta:hover{filter:brightness(0.95);box-shadow:0 8px 18px rgba(230,57,70,0.25)}
+    .btn{display:inline-flex;align-items:center;gap:8px;border-radius:8px;padding:8px 12px;text-decoration:none}
+    .btn-outline{border:1px solid var(--color-primary);color:var(--color-primary);background:#fff}
+    .btn-outline:hover{background:#eaf2fd}
+    .btn-success{background:rgba(37,211,102,.1);color:#22c55e;}
+    .btn-success:hover{background:rgba(37,211,102,.2)}
+    /* Hero minimal corporate: fond blanc, 2 colonnes */
+    .hero-wrap{background:var(--color-card-bg);border:1px solid var(--color-border-light);border-left:none;border-right:none}
+    .hero-wrap.has-image{background-image:var(--hero-url);background-position:center;background-size:cover;background-repeat:no-repeat;border:0}
+    .hero{max-width:1500px;margin:0 auto;padding:28px 24px}
+    .hero-wrap.has-image .hero{padding:42px 24px;border-radius:16px;background:linear-gradient(180deg,rgba(2,6,23,0.68),rgba(2,6,23,0.72));border:1px solid rgba(255,255,255,0.08);box-shadow:0 12px 32px rgba(2,6,23,0.45)}
+    .hero-grid{display:grid;grid-template-columns:1fr;gap:18px}
+    @media(min-width:1024px){.hero-grid{grid-template-columns:1fr}}
+    .hero h1{font-size:32px;line-height:1.25;margin:6px 0 10px;font-weight:700;letter-spacing:-0.02em;color:var(--color-text-main)}
+    @media(max-width:1023px){.hero h1{font-size:26px}}
+    .hero p.sub{color:#475569;margin:0 0 10px;font-size:16px;max-width:860px}
+    @media(max-width:1023px){.hero p.sub{font-size:15px}}
+    .hero .meta-line{color:var(--color-text-muted);font-size:14px;line-height:1.5;margin-top:6px}
+    .hero .meta-line .sep{margin:0 6px}
+    .badge-pill{display:inline-block;background:#f1f5f9;border:1px solid var(--color-border-light);color:var(--color-text-main);padding:6px 12px;border-radius:999px;font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+    .hero-wrap.has-image .badge-pill{background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.18);color:#fff}
+    .hero-wrap.has-image .hero h1{color:#fff}
+    .hero-wrap.has-image .hero p.sub{color:#e2e8f0}
+    .hero-wrap.has-image .hero .meta-line{color:#cbd5e1}
+    .breadcrumb{gap:8px;font-size:14px;line-height:1.5;color:var(--color-text-muted)}
+    .breadcrumb a{color:var(--color-text-muted);text-decoration:none}
+    .breadcrumb a:hover{color:var(--color-primary);text-decoration:underline}
+    .breadcrumb .sep{padding:0 6px;color:var(--color-text-muted)}
+    .cta-card{background:var(--color-card-bg);border:1px solid var(--color-border-light);border-radius:16px;box-shadow:0 6px 18px rgba(15,23,42,0.05);padding:18px;transition:box-shadow .2s ease}
+    .cta-card:hover{box-shadow:0 12px 24px rgba(15,23,42,0.08)}
+    .cta-card h3{margin:0 0 10px;font-size:18px;color:var(--color-text-main);font-weight:700;letter-spacing:-.01em}
+    .cta-card .line{display:flex;align-items:center;gap:8px;margin:6px 0;color:var(--color-text-main);font-size:14px}
+    .cta-ribbon{display:none}
+    .cta-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .cta-icon{width:40px;height:40px;border-radius:999px;background:#fff;border:1px solid var(--color-border-light);display:flex;align-items:center;justify-content:center;color:var(--color-primary)}
+    .cta-icon svg{display:block}
+    .cta-sub{font-size:13px;color:var(--color-text-muted)}
+    .feature-list{list-style:none;margin:8px 0 12px 0;padding:0}
+    .feature-list li{position:relative;padding-left:18px;margin:6px 0;font-size:14px;color:var(--color-text-main)}
+    .feature-list li::before{content:"";position:absolute;left:0;top:8px;width:10px;height:10px;border-radius:2px;background:linear-gradient(90deg,#16a34a,#34d399)}
+    .badge-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+    .badge{background:#e9eff6;border:none;border-radius:999px;padding:6px 12px;font-size:12px;color:#334155;text-transform:uppercase;letter-spacing:.01em}
+    .cta-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+    .cta-actions .btn-primary{grid-column:1/-1}
+    .btn-primary{display:inline-block;min-height:36px;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-2));color:#fff;text-decoration:none;border-radius:14px;padding:8px 12px;font-size:13px;font-weight:700;width:100%;text-align:center;letter-spacing:.005em}
+    .btn-primary:hover{filter:brightness(0.985);box-shadow:0 4px 10px rgba(230,57,70,0.18)}
+    .btn-phone{display:inline-flex;align-items:center;gap:8px;min-height:40px;background:#fff;color:#0f172a;text-decoration:none;border-radius:9999px;padding:9px 14px;font-size:14px;font-weight:600;border:1px solid #e8edf3}
+    .btn-wa{display:inline-flex;align-items:center;gap:8px;min-height:40px;background:linear-gradient(90deg,#22c55e,#16a34a);color:#fff;text-decoration:none;border-radius:9999px;padding:9px 14px;font-size:14px;font-weight:700}
+    .btn-phone svg,.btn-wa svg{margin-right:8px}
+    .btn-primary:focus-visible,.btn-phone:focus-visible,.btn-wa:focus-visible{outline:3px solid rgba(230,57,70,0.25);outline-offset:2px}
+    @media(max-width:1023px){.btn-phone,.btn-wa{width:100%;justify-content:center}}
+    .title{font-size:30px;line-height:1.15;margin:0 0 10px;font-weight:800;color:#0f172a}
+    .meta{color:#475569;font-size:12px;margin-bottom:16px}
+    .hero-img{width:100%;height:auto;border-radius:12px;border:1px solid #e2e8f0;margin:10px 0}
+    .layout{display:grid;grid-template-columns:1fr;gap:24px;margin-top:8px;margin-bottom:48px}
+    @media(min-width:1024px){.layout{grid-template-columns:0.75fr 0.25fr;column-gap:32px}}
+    .content{background:var(--color-card-bg);border:1px solid var(--color-border-light);border-radius:14px;box-shadow:0 8px 28px rgba(15,23,42,0.06);padding:16px}
+    .article-inner{max-width:1120px}
+    .content p{font-size:16px;line-height:1.7;margin:0 0 14px}
+    @media(max-width:1023px){.content p{font-size:15px}}
+    .content h2{font-size:24px;line-height:1.3;font-weight:600;margin:32px 0 12px}
+    @media(max-width:1023px){.content h2{font-size:20px}}
+    .content h3{font-size:20px;font-weight:600;margin:24px 0 8px}
+    @media(max-width:1023px){.content h3{font-size:18px}}
+    .content :is(h2,h3){margin-top:18px}
+    .content ul,.content ol{margin:6px 0 14px 22px}
+    .content li{margin:4px 0}
+    .related{margin-top:18px}
+    .related a{display:inline-block;margin:6px 8px 0 0;padding:8px 12px;border:1px solid #e2e8f0;border-radius:10px;color:#0f172a;text-decoration:none;background:#fff}
+    .toc{position:sticky;top:90px;background:var(--color-card-bg);border:1px solid var(--color-border-light);border-radius:14px;box-shadow:0 8px 28px rgba(15,23,42,0.06);padding:16px}
+    .toc h3{margin:0 0 8px;font-size:16px;font-weight:600}
+    .toc ul{margin:0;padding-left:18px}
+    .sidebar-card{background:var(--color-card-bg);border:1px solid var(--color-border-light);border-radius:14px;padding:16px;box-shadow:0 8px 28px rgba(15,23,42,0.06)}
+    .cta-box{margin-top:16px;background:linear-gradient(45deg,#e63946 0%,#ff6b6b 100%);color:#fff;border-radius:14px;padding:14px}
+    .cta-btn{display:inline-block;margin-top:8px;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-2));color:#fff;text-decoration:none;padding:10px 14px;border-radius:999px;font-weight:700}
+    /* Rendu visuel PRO pour le contenu généré */
+    .content table{width:100%;border-collapse:collapse;margin:12px 0;font-size:15px}
+    .content thead th{background:#f1f5f9;color:#0f172a}
+    .content th,.content td{border:1px solid #e2e8f0;padding:10px;text-align:left;vertical-align:top}
+    .content tbody tr:nth-child(odd){background:#fafafa}
+    .content aside{border:1px solid #e2e8f0;background:#fafafa;border-radius:10px;padding:12px;margin:12px 0}
+    .content aside.attention{border-color:#f5c2c7;background:#fff5f5}
+    .content details{border:1px solid #e2e8f0;border-radius:10px;background:#fff;padding:8px 12px;margin:12px 0}
+    .content details summary{cursor:pointer;font-weight:700;outline:none}
+    .content img{max-width:100%;height:auto;border-radius:10px;border:1px solid #e2e8f0}
+    .content ul{padding-left:20px}
+    .content li{margin:6px 0}
+    /* Breadcrumb + partage + progression */
+    .breadcrumb{display:flex;align-items:center;gap:6px;color:#475569;font-size:12px;margin:4px 0 10px}
+    .breadcrumb a{color:#0f172a;text-decoration:none}
+    .breadcrumb .sep{opacity:0.5}
+    .share{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+    .share a,.share button{border:1px solid #e2e8f0;background:#fff;padding:6px 10px;border-radius:999px;font-size:12px;color:#0f172a;text-decoration:none;cursor:pointer}
+    .share a:hover,.share button:hover{background:#f8fafc}
+    .toc a.active{font-weight:700;color:#0ea5e9}
+    .progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#0ea5e9,#22c55e);width:0;z-index:9999}
+    /* CTA mobile collante */
+    .sticky-cta{position:fixed;left:12px;right:12px;bottom:12px;background:#0ea5e9;color:#fff;border-radius:999px;padding:12px 16px;text-align:center;font-weight:800;box-shadow:0 12px 30px rgba(2,6,23,.25)}
+    .sticky-cta a{color:#fff;text-decoration:none}
+    @media(min-width:1024px){.sticky-cta{display:none}}
+    /* Badges d'info et tags cliquables */
+    .badges{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
+    .badge{display:inline-block;background:#e2e8f0;color:#0f172a;border-radius:999px;padding:4px 10px;font-size:12px}
+    .tags{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 10px}
+    .tag-chip{display:inline-block;border:1px solid #e2e8f0;background:#fff;border-radius:999px;padding:6px 10px;font-size:12px;text-decoration:none;color:#0f172a}
+    .tag-chip:hover{background:#f8fafc}
+    /* Tables responsives */
+    .table-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px}
+    .table-wrap table{margin:0}
+    /* Cartes articles liés */
+    .related-grid{display:grid;gap:16px;grid-template-columns:1fr}
+    @media(min-width:700px){.related-grid{grid-template-columns:1fr}}
+    @media(min-width:1024px){.related-grid{grid-template-columns:1fr}}
+    .card{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:row}
+    .card img{width:120px;height:100%;max-height:120px;object-fit:cover;border:0;border-right:1px solid #e2e8f0}
+    .card .card-body{padding:12px}
+    .card .card-title{font-weight:800;color:#0f172a;margin:0 0 6px;font-size:16px;line-height:1.3}
+    .card .card-meta{font-size:12px;color:#64748b;display:flex;gap:8px;flex-wrap:wrap}
+    /* Navigation précédent/suivant */
+    .prevnext{display:flex;justify-content:space-between;gap:12px;margin-top:18px}
+    .prevnext a{flex:1;display:block;border:1px solid #e2e8f0;border-radius:10px;padding:10px;text-decoration:none;color:#0f172a;background:#fff}
+    .prevnext a small{display:block;color:#64748b}
+    /* Auteur / mise à jour */
+    .author-box{margin-top:16px;border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#fff}
+    .author-box .name{font-weight:800}
+    .author-box .date{font-size:12px;color:#64748b}
+    /* Lightbox */
+    .lightbox{position:fixed;inset:0;background:rgba(2,6,23,.8);display:none;align-items:center;justify-content:center;padding:16px;z-index:9998}
+    .lightbox.open{display:flex}
+    .lightbox img{max-width:95vw;max-height:85vh;border-radius:12px;border:1px solid #334155}
+    .lightbox .caption{color:#e2e8f0;margin-top:8px;text-align:center}
+    /* Ancre H2 (copier lien) */
+    .h2-anchor{margin-left:8px;font-size:12px;opacity:0.6;text-decoration:none}
+    .h2-anchor:hover{opacity:1}
+    /* TOC mobile repliable */
+    .toc-toggle{display:none;border:1px solid #e2e8f0;background:#fff;border-radius:999px;padding:6px 10px;font-size:12px;cursor:pointer}
+    @media(max-width:1023px){.toc-toggle{display:inline-block}.toc.collapsed ul{display:none}}
+    /* Footer */
+    .site-footer{margin-top:28px;background:#0f172a;color:#e2e8f0}
+    .site-footer .inner{max-width:1500px;margin:0 auto;padding:22px 16px;display:grid;gap:18px;grid-template-columns:1fr}
+    @media(min-width:900px){.site-footer .inner{grid-template-columns:2fr 1fr 1fr}}
+    .site-footer a{color:#e2e8f0;text-decoration:none}
+    .site-footer a:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div id="progress" class="progress"></div>
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="<%= (origin || '').replace(/\/$/, '/') %>">
+        <img src="<%= (origin || '').replace(/\/$/, '') %>/images/logo.png" alt="Car Parts France" style="height:50px; width:auto; border-radius:6px" />
+        <span>Car Parts France</span>
+      </a>
+      <nav class="site-nav">
+        <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a>
+        <a href="<%= (origin || '') + '/a-propos' %>">À propos</a>
+        <a href="<%= (origin || '') + '/contact' %>">Contact</a>
+        <a href="https://www.cpfmoteur.fr/demande-devis" class="nav-cta">Demander un devis</a>
+        <a class="btn btn-outline" href="tel:0465845488">📞 04 65 84 54 88</a>
+        <a class="btn btn-success" href="https://wa.me/330756875025" target="_blank" rel="noopener">🟢 WhatsApp</a>
+      </nav>
+    </div>
+  </header>
+  <% 
+    var tagsLower = Array.isArray(post?.tags) ? post.tags.map(function(t){ return String(t).toLowerCase(); }) : [];
+    var isEnginePost = tagsLower.includes('moteur') || tagsLower.includes('code_moteur') || /\b(code\s*moteur|moteur)\b/i.test(post?.title || '');
+    var _brand = '', _code = '';
+    try {
+      var tt = String(post?.title || '');
+      var m = tt.match(/moteur\s+([a-z0-9]+)[^a-z0-9]+([a-z0-9\.-]+)/i) || tt.match(/\b([A-Z][a-z]+)\b.*?([A-Z0-9][\w\.-]{2,})/);
+      if (m) { _brand = (m[1]||'').trim(); _code = (m[2]||'').trim(); }
+    } catch (e) {}
+  %>
+  <% if (ogImage) { %>
+    <style>
+      .hero-wrap.has-image { --hero-url: url('<%= ogImage %>'); }
+    </style>
+  <% } %>
+  <div class="hero-wrap<% if (ogImage) { %> has-image<% } %>">
+    <div class="hero">
+      <div class="hero-grid">
+        <div class="blog-article-header">
+          <span class="badge-pill">MOTEURS TESTÉS ET GARANTIS</span>
+          <h1 class="title blog-article-title"><%= post?.title || title %></h1>
+          <% var _sub = (post && post.summary) ? String(post.summary) : (description || ''); if (_sub) { %>
+            <p class="sub blog-article-subtitle"><%= _sub %></p>
+          <% } %>
+          <div class="meta-line">
+            <% if (post?.publishedAt) { %>Publié le <%= new Date(post.publishedAt).toLocaleDateString('fr-FR') %><% } %>
+            <span class="sep">·</span>
+            <span class="reading-time"></span>
+            <% if (typeof _brand !== 'undefined' && _brand && _code) { %>
+              <span class="sep">·</span>
+              <span><%= _brand %> <%= _code %></span>
+            <% } %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="container" style="margin-top:16px;margin-bottom:24px">
+    <nav class="breadcrumb blog-article-breadcrumb">
+      <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a>
+      <span class="sep">/</span>
+      <a href="<%= (origin || '') + '/blog' %>">Blog</a>
+      <span class="sep">/</span>
+      <span style="color:var(--color-text-main)"><%= (post?.title || title || '').slice(0,70) %><%= (post?.title||title||'').length>70?'…':'' %></span>
+    </nav>
+  </div>
+  <div class="container">
+    <!-- Contenu principal -->
+    <% if (Array.isArray(post?.tags) && post.tags.length) { %>
+      <div class="tags">
+        <% post.tags.forEach(function(t){ %>
+          <a class="tag-chip" href="/blog/tag/<%= encodeURIComponent(String(t).toLowerCase()) %>">#<%= t %></a>
+        <% }) %>
+      </div>
+    <% } %>
+    <% if (ogImage) { %>
+      <img class="hero-img" src="<%= ogImage %>" alt="<%= post?.title || '' %>">
+    <% } %>
+
+    <div class="layout">
+      <div class="content"><div class="article-inner" id="article-content"><%- post?.contentHtml || '' %></div>
+      <aside class="toc">
+        <h3>Sommaire <button class="toc-toggle" id="toc-toggle" aria-label="Basculer le sommaire">Afficher/Masquer</button></h3>
+        <ul id="toc-list"></ul>
+        <div class="cta-box">
+          <div style="font-weight:700">Besoin d’un devis moteur ?</div>
+          <div style="font-size:13px;opacity:0.9">Réponse sous 24h, compatibilité confirmée.</div>
+          <a class="cta-btn" href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a>
+        </div>
+      </aside>
+    </div>
+
+    <% if (Array.isArray(related) && related.length) { %>
+      <div class="related">
+        <strong>Articles liés</strong>
+        <div class="related-grid">
+          <% related.forEach(function(r){ %>
+            <a class="card" href="/blog/<%= r.slug %>">
+              <% if (r.image) { %><img src="<%= r.image %>" alt="<%= r.title %>" loading="lazy" decoding="async" /><% } %>
+              <div class="card-body">
+                <div class="card-title"><%= r.title %></div>
+                <div class="card-meta">
+                  <% if (r.publishedAt) { %><span><%= new Date(r.publishedAt).toLocaleDateString('fr-FR') %></span><% } %>
+                  <% if (Array.isArray(r.tags) && r.tags.length) { %>
+                    <% r.tags.slice(0,2).forEach(function(t){ %><span>#<%= t %></span><% }) %>
+                  <% } %>
+                </div>
+              </div>
+            </a>
+          <% }) %>
+        </div>
+      </div>
+    <% } %>
+    <div class="share" style="margin:12px 0 4px">
+      <a href="#" id="share-twitter-bottom">Partager Twitter</a>
+      <a href="#" id="share-fb-bottom">Partager Facebook</a>
+      <a href="#" id="share-wa-bottom">WhatsApp</a>
+      <button id="share-copy-bottom">Copier le lien</button>
+    </div>
+    <section class="blog-cta">
+      <h2>Besoin d’un moteur testé et garanti ?</h2>
+      <p>Obtenez un devis sous 24h. Indiquez votre immatriculation ou votre VIN pour vérifier la compatibilité.</p>
+      <a class="blog-btn-primary" href="https://www.cpfmoteur.fr/demande-devis">Voir nos solutions</a>
+    </section>
+    <% if (prev || next) { %>
+      <nav class="prevnext">
+        <% if (prev) { %>
+          <a href="/blog/<%= prev.slug %>"><small>← Article précédent</small><div><%= prev.title %></div></a>
+        <% } else { %><span></span><% } %>
+        <% if (next) { %>
+          <a style="text-align:right" href="/blog/<%= next.slug %>"><small>Article suivant →</small><div><%= next.title %></div></a>
+        <% } else { %><span></span><% } %>
+      </nav>
+    <% } %>
+    <div class="author-box">
+      <div class="name">Car Parts France</div>
+      <div class="date">Dernière mise à jour: <%= new Date(post?.updatedAt || post?.publishedAt || Date.now()).toLocaleDateString('fr-FR') %></div>
+    </div>
+  </div>
+  <div class="sticky-cta"><a href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a></div>
+  <footer class="site-footer">
+    <div class="inner">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span class="logo" style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#e63946,#ff6b6b)"></span>
+          <strong>Car Parts France</strong>
+        </div>
+        <div style="opacity:0.9;font-size:14px">Moteurs testés & garantis. Devis sous 24h. Livraison partout en France.</div>
+      </div>
+      <div>
+        <strong>Liens</strong><br />
+        <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a><br />
+        <a href="<%= (origin || '') + '/blog' %>">Blog</a><br />
+        <a href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a>
+      </div>
+      <div>
+        <strong>Légal</strong><br />
+        <a href="#">Mentions légales</a><br />
+        <a href="#">Politique de confidentialité</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
+
+<script>
+  (function(){
+    function run(){
+      try {
+        const root = document.getElementById('article-content');
+        const list = document.getElementById('toc-list');
+        if (!root || !list) return;
+        // Regrouper sections: chaque H2 + contenu suivant -> .blog-section
+        try {
+          const h2s = Array.from(root.querySelectorAll('h2'));
+          h2s.forEach((h2) => {
+            if (h2.closest('.blog-section')) return;
+            const sec = document.createElement('section');
+            sec.className = 'blog-section';
+            h2.classList.add('blog-section-title');
+            root.insertBefore(sec, h2);
+            let cur = h2;
+            while (cur) {
+              const next = cur.nextSibling;
+              sec.appendChild(cur);
+              if (!next) break;
+              if (next.nodeType === 1 && next.tagName && next.tagName.toLowerCase() === 'h2') break;
+              cur = next;
+            }
+          });
+        } catch {}
+        const heads = root.querySelectorAll('h2, h3');
+        heads.forEach((h, idx) => {
+          if (!h.id) h.id = 'sec-' + (idx+1);
+          const li = document.createElement('li');
+          if (h.tagName.toLowerCase() === 'h3') li.style.marginLeft = '12px';
+          const a = document.createElement('a'); a.textContent = h.textContent || ('Section ' + (idx+1)); a.href = '#' + h.id; a.style.textDecoration='none'; a.style.color='#0f172a';
+          li.appendChild(a); list.appendChild(li);
+        });
+        // Temps de lecture (~220 mots/min)
+        const words = (root.textContent||'').trim().split(/\s+/).filter(Boolean).length;
+        const mins = Math.max(1, Math.round(words/220));
+        const rt = document.querySelector('.reading-time');
+        if (rt) {
+          rt.textContent = `${mins} min de lecture`;
+        } else {
+          const meta = document.querySelector('.meta-line') || document.querySelector('.meta');
+          if (meta) {
+            meta.appendChild(document.createTextNode(' · '));
+            const span = document.createElement('span');
+            span.textContent = `${mins} min de lecture`;
+            meta.appendChild(span);
+          }
+        }
+        // Barre de progression de lecture
+        const progress = document.getElementById('progress');
+        const updateProgress = () => {
+          const scrollTop = window.scrollY || document.documentElement.scrollTop;
+          const docH = document.documentElement.scrollHeight - window.innerHeight;
+          const pct = Math.max(0, Math.min(100, docH ? (scrollTop/docH)*100 : 0));
+          if (progress) progress.style.width = pct + '%';
+        };
+        window.addEventListener('scroll', updateProgress, { passive: true });
+        updateProgress();
+        // Surlignage actif dans le sommaire
+        const tocLinks = Array.from(list.querySelectorAll('a'));
+        const obs = new IntersectionObserver((entries)=>{
+          entries.forEach(e=>{
+            const id = e.target.id;
+            const link = tocLinks.find(a=>a.getAttribute('href')==='#'+id);
+            if (link) {
+              if (e.isIntersecting) { tocLinks.forEach(a=>a.classList.remove('active')); link.classList.add('active'); }
+            }
+          });
+        },{ rootMargin: '-40% 0px -55% 0px', threshold: [0,1] });
+        heads.forEach(h=>obs.observe(h));
+        // Partage
+        const pageUrl = window.location.href;
+        const title = (document.querySelector('.title')?.textContent||'').trim();
+        const tw = document.getElementById('share-twitter'); if (tw) tw.href = `https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(title)}`;
+        const fb = document.getElementById('share-fb'); if (fb) fb.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`;
+        const wa = document.getElementById('share-wa'); if (wa) wa.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(title+' '+pageUrl)}`;
+        const cp = document.getElementById('share-copy'); if (cp) cp.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(pageUrl); cp.textContent='Lien copié'; setTimeout(()=>cp.textContent='Copier le lien',1500);}catch{}});
+        const twb = document.getElementById('share-twitter-bottom'); if (twb) twb.href = `https://twitter.com/intent/tweet?url=${encodeURIComponent(pageUrl)}&text=${encodeURIComponent(title)}`;
+        const fbb = document.getElementById('share-fb-bottom'); if (fbb) fbb.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(pageUrl)}`;
+        const wab = document.getElementById('share-wa-bottom'); if (wab) wab.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(title+' '+pageUrl)}`;
+        const cpb = document.getElementById('share-copy-bottom'); if (cpb) cpb.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(pageUrl); cpb.textContent='Lien copié'; setTimeout(()=>cpb.textContent='Copier le lien',1500);}catch{}});
+        // Ancre H2 pour copier lien
+        const h2s = root.querySelectorAll('h2');
+        h2s.forEach(h2=>{
+          const btn = document.createElement('a');
+          btn.href = '#' + h2.id; btn.className = 'h2-anchor'; btn.setAttribute('aria-label','Copier le lien de la section'); btn.textContent = '🔗';
+          btn.addEventListener('click', async (e)=>{
+            e.preventDefault();
+            const url = window.location.origin + window.location.pathname + '#' + h2.id;
+            try { await navigator.clipboard.writeText(url); btn.textContent='✅'; setTimeout(()=>btn.textContent='🔗',1000);} catch {}
+          });
+          h2.appendChild(btn);
+        });
+        // Tables responsives: wrapper avec .table-wrap
+        root.querySelectorAll('table').forEach(tb=>{
+          if (tb.parentElement && tb.parentElement.classList.contains('table-wrap')) return;
+          const wrap = document.createElement('div'); wrap.className = 'table-wrap';
+          tb.parentNode.insertBefore(wrap, tb); wrap.appendChild(tb);
+        });
+        // Images: lazy + lightbox + légendes
+        const lb = document.createElement('div'); lb.id='lightbox'; lb.className='lightbox'; lb.innerHTML = '<div class="inner"><img alt="" /><div class="caption"></div></div>';
+        document.body.appendChild(lb);
+        const lbImg = lb.querySelector('img'); const lbCap = lb.querySelector('.caption');
+        const closeLb = ()=>{ lb.classList.remove('open'); };
+        lb.addEventListener('click', closeLb);
+        window.addEventListener('keydown', (e)=>{ if (e.key==='Escape') closeLb(); });
+        root.querySelectorAll('img').forEach(img=>{
+          img.loading = 'lazy'; img.decoding = 'async';
+          img.style.cursor = 'zoom-in';
+          img.addEventListener('click', ()=>{
+            lbImg.src = img.src; if (img.alt) { lbCap.textContent = img.alt; lbCap.style.display='block'; } else { lbCap.style.display='none'; }
+            lb.classList.add('open');
+          });
+          // Légende sous l'image si alt présent et pas déjà figure
+          if (img.alt && (!img.parentElement || img.parentElement.tagName.toLowerCase() !== 'figure')) {
+            const fig = document.createElement('figure');
+            const cap = document.createElement('figcaption'); cap.textContent = img.alt; cap.style.fontSize='12px'; cap.style.color='#64748b'; cap.style.marginTop='6px';
+            img.parentNode.insertBefore(fig, img); fig.appendChild(img); fig.appendChild(cap);
+          }
+        });
+        // TOC repliable sur mobile
+        const toc = document.querySelector('.toc');
+        const toggle = document.getElementById('toc-toggle');
+        if (toggle && toc) toggle.addEventListener('click', ()=> toc.classList.toggle('collapsed'));
+      } catch {}
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', run);
+    } else {
+      run();
+    }
+  })();
+</script>
+          <strong>Car Parts France</strong>
+        </div>
+        <div style="opacity:0.9;font-size:14px">Moteurs testés & garantis. Devis sous 24h. Livraison partout en France.</div>
+      </div>
+      <div>
+        <strong>Liens</strong><br />
+        <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a><br />
+        <a href="<%= (origin || '') + '/blog' %>">Blog</a><br />
+        <a href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a>
+      </div>
+      <div>
+        <strong>Légal</strong><br />
+        <a href="#">Mentions légales</a><br />
+        <a href="#">Politique de confidentialité</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

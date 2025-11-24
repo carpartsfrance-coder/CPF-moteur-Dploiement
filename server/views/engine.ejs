@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <% if (description) { %><meta name="description" content="<%= description %>"><% } %>
+  <% if (canonical) { %><link rel="canonical" href="<%= canonical %>"><% } %>
+  <% if (typeof noindex !== 'undefined' && noindex) { %><meta name="robots" content="noindex,nofollow"><% } %>
+
+  <% if (ogImage) { %>
+    <meta property="og:image" content="<%= ogImage %>">
+    <meta name="twitter:image" content="<%= ogImage %>">
+  <% } %>
+  <meta property="og:title" content="<%= title %>">
+  <% if (description) { %><meta property="og:description" content="<%= description %>"><% } %>
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="<%= canonical %>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<%= title %>">
+  <% if (description) { %><meta name="twitter:description" content="<%= description %>"><% } %>
+
+  <script type="application/ld+json">
+  <%- JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: page?.seo?.title || page?.title || `Moteur ${page?.brand || page?.marque || ''} ${page?.model || ''} ${page?.code || ''}`.trim(),
+    description: description || page?.seoDescription || '',
+    brand: page?.brand || page?.marque || undefined,
+    sku: page?.code || undefined,
+    image: (Array.isArray(imageUrls) && imageUrls.length) ? imageUrls[0] : undefined,
+    url: canonical
+  }) %>
+  </script>
+
+  <% if (canonical) { %>
+  <script type="application/ld+json">
+  <%- JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Accueil', item: (origin || '').replace(/\/$/, '/') },
+      { '@type': 'ListItem', position: 2, name: (page?.marque || page?.brand || 'Moteurs'), item: (origin || '') + '/moteurs/' + (page?.brandSlug || page?.marque ? (page?.brandSlug || (page?.marque && page?.marque.toLowerCase().replace(/[^a-z0-9]+/g,'-'))) : '') },
+      { '@type': 'ListItem', position: 3, name: (page?.model || page?.cylindree || 'Modèle'), item: canonical }
+    ]
+  }) %>
+  </script>
+  <% } %>
+
+  <style>
+    body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0;color:#0f172a;background:#f8fafc}
+    .container{max-width:1040px;margin:0 auto;padding:24px}
+    .hero{display:flex;flex-direction:column;gap:12px;padding:16px 0}
+    .title{font-size:30px;line-height:1.15;margin:0;font-weight:800;color:#0f172a}
+    .desc{color:#334155;font-size:16px;margin:0}
+    .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:18px}
+    @media(min-width:960px){.grid{grid-template-columns:1.1fr 0.9fr}}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 8px 28px rgba(15,23,42,0.06);padding:16px}
+    .card h2{margin:0 0 10px;font-size:18px;color:#0f172a}
+    .meta{display:flex;flex-wrap:wrap;gap:10px;color:#475569}
+    .meta span{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;padding:6px 10px;font-size:13px}
+    .images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .images img{width:100%;height:auto;border-radius:10px;border:1px solid #e2e8f0}
+    .list{margin:0;padding-left:18px}
+    .faq-item{margin:10px 0}
+    .cta{margin-top:14px;display:inline-block;background:linear-gradient(45deg,#e63946 0%,#ff6b6b 100%);color:#fff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700}
+    nav.related{margin-top:16px}
+    nav.related a{display:inline-block;margin:6px 8px 0 0;padding:8px 12px;border-radius:10px;border:1px solid #e2e8f0;text-decoration:none;color:#0f172a;background:#fff}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1 class="title"><%= page?.seo?.h1 || page?.title || `Moteur ${page?.brand || page?.marque || ''} ${page?.model || ''} ${page?.code || ''}` %></h1>
+      <% if (description) { %><p class="desc"><%= description %></p><% } %>
+    </div>
+
+    <nav style="font-size:13px;color:#475569;margin-bottom:8px">
+      <a href="/" style="color:#475569;text-decoration:none">Accueil</a>
+      <span> / </span>
+      <a href="/moteurs/<%= (page?.brandSlug || (page?.marque||'').toLowerCase().replace(/[^a-z0-9]+/g,'-')) %>" style="color:#475569;text-decoration:none"><%= page?.marque || page?.brand || 'Moteurs' %></a>
+      <% if (page?.model || page?.cylindree) { %>
+        <span> / </span>
+        <span><%= page?.model || page?.cylindree %></span>
+      <% } %>
+    </nav>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Présentation</h2>
+        <% if (page?.contentHtml) { %>
+          <div><%- page.contentHtml %></div>
+        <% } else { %>
+          <p>Moteur <strong><%= page?.code || '' %></strong> <%= (page?.brand || page?.marque || '') %> <%= page?.model || '' %> testé et garanti. Demandez votre devis.</p>
+        <% } %>
+        <div class="meta" style="margin-top:10px">
+          <% if (page?.cylindree || page?.specs?.engineSize) { %><span>Cylindrée: <%= page?.cylindree || page?.specs?.engineSize %></span><% } %>
+          <% if (page?.carburant || page?.specs?.fuel) { %><span>Carburant: <%= page?.carburant || page?.specs?.fuel %></span><% } %>
+          <% if (page?.annees || page?.years) { %><span>Années: <%= page?.annees || page?.years %></span><% } %>
+        </div>
+        <a class="cta" href="/demande-devis?engine=<%= encodeURIComponent(page?.code || '') %>">Demander un devis</a>
+      </div>
+
+      <div class="card">
+        <h2>Galerie</h2>
+        <% if (Array.isArray(imageUrls) && imageUrls.length) { %>
+          <div class="images">
+            <% imageUrls.slice(0, 6).forEach(function(src){ %>
+              <img loading="lazy" src="<%= src %>" alt="Moteur <%= page?.code || '' %>">
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p>Aucune image disponible.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:18px">
+      <div class="card">
+        <h2>Compatibilités</h2>
+        <% if (Array.isArray(page?.compatibilities) && page.compatibilities.length) { %>
+          <ul class="list">
+            <% page.compatibilities.forEach(function(c){ %>
+              <li><%= (c?.label || c) %></li>
+            <% }) %>
+          </ul>
+        <% } else { %>
+          <p>Compatibilités sur demande avec votre immatriculation ou VIN.</p>
+        <% } %>
+      </div>
+      <div class="card">
+        <h2>Pannes connues</h2>
+        <% if (Array.isArray(page?.knownIssues) && page.knownIssues.length) { %>
+          <ul class="list">
+            <% page.knownIssues.forEach(function(i){ %>
+              <li><%= (i?.label || i) %></li>
+            <% }) %>
+          </ul>
+        <% } else { %>
+          <p>Nous fournissons un rapport de test et une garantie. Contactez-nous pour les points de contrôle.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <% if (Array.isArray(page?.faq) && page.faq.length) { %>
+      <div class="card" style="margin-top:18px">
+        <h2>FAQ</h2>
+        <% page.faq.forEach(function(f){ %>
+          <div class="faq-item">
+            <strong><%= f.q %></strong>
+            <div><%= f.a %></div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+
+    <% if (Array.isArray(relatedLinks) && relatedLinks.length) { %>
+      <nav class="related">
+        <strong>Autres moteurs de la même marque</strong><br />
+        <% relatedLinks.forEach(function(l){ %>
+          <a href="<%= l.href %>"><%= l.label %></a>
+        <% }) %>
+      </nav>
+    <% } %>
+  </div>
+</body>
+</html>
