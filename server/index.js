@@ -11,11 +11,14 @@ import fs from 'fs';
 import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
 import ejs from 'ejs';
 import { fileURLToPath } from 'url';
+import dns from 'dns';
 
 let __sharp = null;
 async function getSharp() { if (__sharp) return __sharp; const m = await import('sharp'); __sharp = m.default || m; return __sharp; }
 
 const app = express();
+// Forcer la préférence IPv4 pour éviter certains problèmes TLS/IPv6 en prod (Vercel)
+try { dns.setDefaultResultOrder('ipv4first'); } catch {}
 // EJS view engine (SSR des pages moteurs)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
