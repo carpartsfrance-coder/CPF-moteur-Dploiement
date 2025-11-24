@@ -2,8 +2,7 @@
   "version": 2,
   "functions": {
     "api/[...all].js": {
-      "includeFiles": "server/**",
-      "runtime": "nodejs20.x"
+      "includeFiles": "server/**"
     }
   },
   "routes": [
