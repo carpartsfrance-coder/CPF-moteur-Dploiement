@@ -12,7 +12,7 @@ import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
 import ejs from 'ejs';
 import { fileURLToPath } from 'url';
 import dns from 'dns';
-import { Agent, setGlobalDispatcher } from 'undici';
+import { Agent, setGlobalDispatcher, fetch as undiciFetch } from 'undici';
 import axios from 'axios';
 import https from 'https';
 
@@ -34,6 +34,7 @@ try {
   });
   setGlobalDispatcher(agent);
 } catch {}
+try { if (!globalThis.fetch) { globalThis.fetch = undiciFetch; } } catch {}
 // EJS view engine (SSR des pages moteurs)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
