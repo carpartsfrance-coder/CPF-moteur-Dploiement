@@ -107,6 +107,17 @@ app.use(cors({
   credentials: true,
 }));
 
+// Endpoint public de diagnostic: compare ?token= avec BACKEND_TOKEN
+app.get('/api/public/test-admin-token', (req, res) => {
+  try {
+    const t = String(TOKEN || '').trim();
+    const q = String((req.query && req.query.token) || '');
+    res.json({ ok: true, hasToken: Boolean(t), providedLen: q.length, expectedLen: t.length, equals: q === t });
+  } catch {
+    res.status(500).json({ ok: false });
+  }
+});
+
 // Pré‑vol explicite pour toutes les routes (important pour Authorization)
 app.options('*', cors({
   origin: (origin, cb) => {
@@ -2173,16 +2184,20 @@ app.get('/api/admin/diag/ping-ai', async (req, res) => {
     const API_BASE = (process.env.AI_API_BASE || '').trim();
     const API_KEY = (process.env.AI_API_KEY || '').trim();
     if (!API_BASE || !API_KEY) return res.status(503).json({ ok: false, error: 'ai_not_configured' });
-    const url = `${API_BASE.replace(/\/$/, '')}/models`;
+    const baseNoSlash = API_BASE.replace(/\/$/, '');
+    const url = `${baseNoSlash}/models`;
+    // 1) Essai avec undiciFetch si dispo, sinon fetch global
     try {
-      const r = await fetch(url, { method: 'GET', headers: { Authorization: `Bearer ${API_KEY}`, Connection: 'close' } });
+      const fetchFn = (typeof undiciFetch === 'function') ? undiciFetch : (typeof fetch === 'function' ? fetch : null);
+      if (!fetchFn) throw new Error('no_fetch_available');
+      const r = await fetchFn(url, { method: 'GET', headers: { Authorization: `Bearer ${API_KEY}`, Connection: 'close' } });
       const ct = String(r.headers.get('content-type') || '').toLowerCase();
       let bodyType = 'text';
       try { if (ct.includes('application/json')) bodyType = 'json'; } catch {}
       let probe = null;
       if (String(req.query.probe || '') === '1') {
         try {
-          const pr = await fetch('https://www.google.com/generate_204', { method: 'GET', headers: { Connection: 'close' } });
+          const pr = await fetchFn('https://www.google.com/generate_204', { method: 'GET', headers: { Connection: 'close' } });
           probe = { ok: pr.ok, status: pr.status };
         } catch (pe) {
           probe = { ok: false, error: String(pe?.message || pe) };
@@ -2190,6 +2205,16 @@ app.get('/api/admin/diag/ping-ai', async (req, res) => {
       }
       return res.json({ ok: r.ok, status: r.status, bodyType, probe });
     } catch (e) {
+      // 2) Fallback HTTPS direct (IPv4 + SNI) sur /models
+      try {
+        const u = new URL(baseNoSlash);
+        const resp = await httpsJsonRequest({ hostname: u.hostname, path: '/models', method: 'GET', headers: { Authorization: `Bearer ${API_KEY}` } });
+        if (resp && typeof resp.status === 'number') {
+          return res.json({ ok: resp.ok, status: resp.status, bodyType: (resp.data ? 'json' : 'text'), fallback: true });
+        }
+      } catch (fe) {
+        // ignore, we will return below
+      }
       const det = {
         message: String(e?.message || e),
         code: e?.code,
