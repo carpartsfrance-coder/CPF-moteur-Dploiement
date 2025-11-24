@@ -613,7 +613,8 @@ function httpsJsonRequest({ hostname, path, method = 'GET', headers = {}, body =
         });
       });
       req.on('error', (err) => resolve({ ok: false, status: 0, err: String(err?.message || err) }));
-      req.setTimeout(28000, () => { try { req.destroy(new Error('timeout')); } catch {} });
+      // Timeout du fallback HTTPS direct raccourci pour tenir sous la limite globale
+      req.setTimeout(20000, () => { try { req.destroy(new Error('timeout')); } catch {} });
       if (body) req.write(body);
       req.end();
     } catch (e) {
@@ -627,7 +628,8 @@ async function callChat(apiBase, apiKey, body) {
   const base = String(apiBase || '').replace(/\/$/, '');
   const url = `${base}/chat/completions`;
   const controller = new AbortController();
-  const to = setTimeout(() => { try { controller.abort(new Error('timeout')); } catch {} }, 28000);
+  // Première tentative (fetch standard) limitée à ~8s pour basculer vite sur le fallback si besoin
+  const to = setTimeout(() => { try { controller.abort(new Error('timeout')); } catch {} }, 8000);
   try {
     const r = await fetch(url, {
       method: 'POST',
@@ -1568,7 +1570,9 @@ app.post('/api/admin/blog-posts/generate', async (req, res) => {
     } catch {}
     const extraHints = brandHints.length ? `\n\nPoints critiques à traiter:\n${brandHints.join('\n')}\n` : '';
 
-    const userPrompt = `Réponds en JSON strict {"title":"...","summary":"...","tags":["..."],"html":"..."}. Écris ~1500 mots en HTML SÉMANTIQUE UNIQUEMENT (aucun style, aucune classe, aucun <script>, aucune balise <style>, pas de <div> ni <span>, pas d'images). Balises autorisées: h2,h3,p,ul,ol,li,table,thead,tbody,tr,th,td,details,summary,strong,em,a.
+    const PROMPT_JSON = FAST ? `{"html":"..."}` : `{"title":"...","summary":"...","tags":["..."],"html":"..."}`;
+    const WORDS_HINT = FAST ? '800–1100' : '1500';
+    const userPrompt = `Réponds en JSON strict ${PROMPT_JSON}. Écris ${WORDS_HINT} mots en HTML SÉMANTIQUE UNIQUEMENT (aucun style, aucune classe, aucun <script>, aucune balise <style>, pas de <div> ni <span>, pas d'images). Balises autorisées: h2,h3,p,ul,ol,li,table,thead,tbody,tr,th,td,details,summary,strong,em,a.
 
 Structure OBLIGATOIRE du HTML (H1 géré par le template, NE PAS inclure de H1):
 - h2 « Résumé / Vue d’ensemble » (150–200 mots)
@@ -1599,7 +1603,7 @@ ${JSON.stringify(data)}`;
       }
       return arr;
     })();
-    const MAX_TOKENS_EFF = FAST ? Math.min(MAX_TOKENS, 1200) : MAX_TOKENS;
+    const MAX_TOKENS_EFF = FAST ? Math.min(MAX_TOKENS, 1600) : MAX_TOKENS;
     try { console.log('[ai] sourcesLen=%d dataLen=%d', sourcesCtx.length || 0, JSON.stringify(data).length); } catch {}
     let j = null, lastTxt = '';
     for (const m of models) {
