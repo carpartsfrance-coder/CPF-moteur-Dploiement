@@ -12,6 +12,7 @@ import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
 import ejs from 'ejs';
 import { fileURLToPath } from 'url';
 import dns from 'dns';
+import { Agent, setGlobalDispatcher } from 'undici';
 
 let __sharp = null;
 async function getSharp() { if (__sharp) return __sharp; const m = await import('sharp'); __sharp = m.default || m; return __sharp; }
@@ -19,6 +20,18 @@ async function getSharp() { if (__sharp) return __sharp; const m = await import(
 const app = express();
 // Forcer la préférence IPv4 pour éviter certains problèmes TLS/IPv6 en prod (Vercel)
 try { dns.setDefaultResultOrder('ipv4first'); } catch {}
+// Forcer undici (fetch Node) à utiliser IPv4 et HTTP/1.1 (désactiver HTTP/2)
+try {
+  const agent = new Agent({
+    connect: {
+      lookup: (hostname, options, cb) => dns.lookup(hostname, { family: 4, all: false }, cb),
+    },
+    allowH2: false,
+    keepAliveTimeout: 10000,
+    keepAliveMaxTimeout: 15000,
+  });
+  setGlobalDispatcher(agent);
+} catch {}
 // EJS view engine (SSR des pages moteurs)
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,11 +51,17 @@ const DEFAULT_ALLOWED = ['http://localhost:3000', 'http://localhost:3001', SERVE
 // Démarrer le worker d'import CSV en arrière-plan (désactivé sur Vercel)
 try { if (!process.env.VERCEL && !process.env.VERCEL_URL) { startImportWorker(); } } catch {}
 const VERCEL_ORIGIN = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
+const WEBSITE_ORIGIN = (() => { try { return getWebsiteOrigin(); } catch { return ''; } })();
 const ENV_ALLOWED = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
-const ALLOWED_ORIGINS = Array.from(new Set([...DEFAULT_ALLOWED, VERCEL_ORIGIN, ...ENV_ALLOWED].filter(Boolean)));
+const ALLOWED_ORIGINS = Array.from(new Set([
+  ...DEFAULT_ALLOWED,
+  VERCEL_ORIGIN,
+  WEBSITE_ORIGIN,
+  ...ENV_ALLOWED
+].filter(Boolean)));
 
 // Utilitaire: attente
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
