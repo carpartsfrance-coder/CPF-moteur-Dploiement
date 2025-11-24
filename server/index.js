@@ -2129,10 +2129,12 @@ app.get('/api/admin/diag/ping-ai', async (req, res) => {
     const API_KEY = (process.env.AI_API_KEY || '').trim();
     if (!API_BASE || !API_KEY) return res.status(503).json({ ok: false, error: 'ai_not_configured' });
     const url = `${API_BASE.replace(/\/$/, '')}/models`;
-    const agent = new https.Agent({ keepAlive: false, minVersion: 'TLSv1.2', lookup: (hostname, options, cb) => dns.lookup(hostname, { family: 4, all: false }, cb) });
     try {
-      const r = await axios.get(url, { headers: { Authorization: `Bearer ${API_KEY}` }, httpsAgent: agent, timeout: 12000, validateStatus: ()=> true });
-      return res.json({ ok: r.status >= 200 && r.status < 300, status: r.status, bodyType: typeof r.data === 'string' ? 'text' : 'json' });
+      const r = await fetch(url, { method: 'GET', headers: { Authorization: `Bearer ${API_KEY}`, Connection: 'close' } });
+      const ct = String(r.headers.get('content-type') || '').toLowerCase();
+      let bodyType = 'text';
+      try { if (ct.includes('application/json')) bodyType = 'json'; } catch {}
+      return res.json({ ok: r.ok, status: r.status, bodyType });
     } catch (e) {
       return res.status(502).json({ ok: false, error: 'ai_tls_failed', details: String(e?.message || e).slice(0, 400) });
     }
