@@ -143,6 +143,7 @@ app.use('/api/admin', (req, res, next) => {
     if (!t) return next();
     const auth = String(req.headers['authorization'] || '');
     if (auth === `Bearer ${t}`) return next();
+    try { if (String(req.query?.token || '') === t) return next(); } catch {}
     return res.status(401).json({ ok: false, error: 'unauthorized' });
   } catch {
     return res.status(401).json({ ok: false, error: 'unauthorized' });
