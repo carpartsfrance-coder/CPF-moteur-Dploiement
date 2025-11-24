@@ -13,6 +13,8 @@ import ejs from 'ejs';
 import { fileURLToPath } from 'url';
 import dns from 'dns';
 import { Agent, setGlobalDispatcher } from 'undici';
+import axios from 'axios';
+import https from 'https';
 
 let __sharp = null;
 async function getSharp() { if (__sharp) return __sharp; const m = await import('sharp'); __sharp = m.default || m; return __sharp; }
@@ -531,6 +533,36 @@ async function ensureBlogIndexes() {
   const col = mongoDb.collection('blog_posts');
   try { await col.createIndex({ slug: 1 }, { unique: true }); } catch {}
   try { await col.createIndex({ status: 1, publishedAt: -1 }); } catch {}
+}
+
+// Helper: appel OpenAI en forçant IPv4 (HTTPS Agent)
+async function callChat(apiBase, apiKey, body) {
+  const url = `${String(apiBase || '').replace(/\/$/, '')}/chat/completions`;
+  try {
+    const agent = new https.Agent({
+    keepAlive: false,
+    minVersion: 'TLSv1.2',
+    // Forcer IPv4 via lookup
+    lookup: (hostname, options, cb) => dns.lookup(hostname, { family: 4, all: false }, cb),
+  });
+    const res = await axios.post(url, body, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Connection': 'close' },
+      httpsAgent: agent,
+      timeout: 28000,
+      validateStatus: () => true,
+      transitional: { clarifyTimeoutError: true },
+    });
+    if (res.status < 200 || res.status >= 300) {
+      let errText = '';
+      try { errText = typeof res.data === 'string' ? res.data : JSON.stringify(res.data); } catch {}
+      return { ok: false, errText: errText || `status_${res.status}` };
+    }
+    return { ok: true, data: res.data };
+  } catch (e) {
+    let errText = '';
+    try { errText = e?.response?.data ? JSON.stringify(e.response.data) : (e?.message || String(e)); } catch { errText = e?.message || 'ai_call_failed'; }
+    return { ok: false, errText };
+  }
 }
 
 async function ensureRedirectsIndexes() {
@@ -1467,9 +1499,9 @@ ${JSON.stringify(data)}`;
     let j = null, lastTxt = '';
     for (const m of models) {
       const body = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, response_format: { type: 'json_object' }, messages: [ { role: 'system', content: sys }, { role: 'user', content: userPrompt } ] };
-      const r = await fetch(`${API_BASE.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify(body) });
-      if (!r.ok) { lastTxt = await r.text().catch(()=> ''); continue; }
-      j = await r.json();
+      const resp = await callChat(API_BASE, API_KEY, body);
+      if (!resp.ok) { lastTxt = resp.errText || ''; continue; }
+      j = resp.data;
       break;
     }
     if (!j) {
@@ -1519,9 +1551,9 @@ ${finalHtml}`;
           let j2 = null, last2 = '';
           for (const m of models) {
             const body2 = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, messages: [ { role: 'system', content: sys }, { role: 'user', content: augmentUser } ] };
-            const r2 = await fetch(`${API_BASE.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify(body2) });
-            if (!r2.ok) { last2 = await r2.text().catch(()=> ''); continue; }
-            j2 = await r2.json();
+            const resp2 = await callChat(API_BASE, API_KEY, body2);
+            if (!resp2.ok) { last2 = resp2.errText || ''; continue; }
+            j2 = resp2.data;
             break;
           }
           if (j2) {
@@ -1557,9 +1589,9 @@ ${finalHtml}`;
             let jf = null, lastf = '';
             for (const m of models) {
               const bodyf = { model: m, temperature: TEMPERATURE, max_tokens: MAX_TOKENS, messages: [ { role: 'system', content: sys }, { role: 'user', content: forceUser } ] };
-              const rf = await fetch(`${API_BASE.replace(/\/$/, '')}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` }, body: JSON.stringify(bodyf) });
-              if (!rf.ok) { lastf = await rf.text().catch(()=> ''); continue; }
-              jf = await rf.json();
+              const respf = await callChat(API_BASE, API_KEY, bodyf);
+              if (!respf.ok) { lastf = respf.errText || ''; continue; }
+              jf = respf.data;
               break;
             }
             if (jf) {
