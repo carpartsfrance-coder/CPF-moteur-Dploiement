@@ -535,9 +535,45 @@ async function ensureBlogIndexes() {
   try { await col.createIndex({ status: 1, publishedAt: -1 }); } catch {}
 }
 
-// Helper: appel OpenAI via fetch (undici), IPv4/H1 forcés par setGlobalDispatcher
+// HTTPS direct (fallback): résout IPv4 et force SNI + Host pour API OpenAI
+function httpsJsonRequest({ hostname, path, method = 'GET', headers = {}, body = '' }) {
+  return new Promise(async (resolve) => {
+    try {
+      const ips = await dns.promises.resolve4(hostname);
+      const ip = ips && ips[0];
+      if (!ip) return resolve({ ok: false, status: 0, err: 'no_ipv4' });
+      const req = https.request({
+        host: ip,
+        port: 443,
+        method,
+        path,
+        servername: hostname, // SNI
+        headers: { ...headers, Host: hostname, Connection: 'close' },
+      }, (res) => {
+        const chunks = [];
+        res.on('data', (d) => chunks.push(d));
+        res.on('end', () => {
+          const buf = Buffer.concat(chunks);
+          const txt = buf.toString('utf8');
+          let data = null;
+          try { data = JSON.parse(txt); } catch {}
+          resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, status: res.statusCode, data, text: txt });
+        });
+      });
+      req.on('error', (err) => resolve({ ok: false, status: 0, err: String(err?.message || err) }));
+      req.setTimeout(28000, () => { try { req.destroy(new Error('timeout')); } catch {} });
+      if (body) req.write(body);
+      req.end();
+    } catch (e) {
+      resolve({ ok: false, status: 0, err: String(e?.message || e) });
+    }
+  });
+}
+
+// Helper: appel OpenAI via fetch (undici) puis fallback HTTPS direct si nécessaire
 async function callChat(apiBase, apiKey, body) {
-  const url = `${String(apiBase || '').replace(/\/$/, '')}/chat/completions`;
+  const base = String(apiBase || '').replace(/\/$/, '');
+  const url = `${base}/chat/completions`;
   const controller = new AbortController();
   const to = setTimeout(() => { try { controller.abort(new Error('timeout')); } catch {} }, 28000);
   try {
@@ -559,7 +595,16 @@ async function callChat(apiBase, apiKey, body) {
     return { ok: true, data };
   } catch (e) {
     clearTimeout(to);
-    return { ok: false, errText: String(e?.message || e) };
+    // Fallback HTTPS direct
+    try {
+      const u = new URL(base);
+      const payload = JSON.stringify(body);
+      const resp = await httpsJsonRequest({ hostname: u.hostname, path: '/chat/completions', method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` }, body: payload });
+      if (!resp.ok) return { ok: false, errText: resp.text || resp.err || 'ai_call_failed' };
+      return { ok: true, data: resp.data };
+    } catch (ee) {
+      return { ok: false, errText: String(ee?.message || ee) };
+    }
   }
 }
 
