@@ -6,6 +6,8 @@
   <title><%= title %></title>
   <% if (description) { %><meta name="description" content="<%= description %>"><% } %>
   <% if (canonical) { %><link rel="canonical" href="<%= canonical %>"><% } %>
+  <% if (prevUrl) { %><link rel="prev" href="<%= (origin || '') + prevUrl %>"><% } %>
+  <% if (nextUrl) { %><link rel="next" href="<%= (origin || '') + nextUrl %>"><% } %>
   <meta property="og:title" content="<%= title %>">
   <% if (description) { %><meta property="og:description" content="<%= description %>"><% } %>
   <meta property="og:type" content="website">
@@ -13,6 +15,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="<%= title %>">
   <% if (description) { %><meta name="twitter:description" content="<%= description %>"><% } %>
+  <% if (gsc) { %><meta name="google-site-verification" content="<%= gsc %>"><% } %>
   <style>
     body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0;color:#0f172a;background:#f8fafc}
     .container{max-width:1040px;margin:0 auto;padding:24px}

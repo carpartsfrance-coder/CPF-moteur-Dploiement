@@ -724,9 +724,11 @@ app.get('/blog', async (req, res) => {
     const pathUrl = '/blog';
     const title = 'Blog — Car Parts France';
     const description = 'Conseils moteurs, pannes, compatibilités et entretien.';
-    const canonical = `${origin}${pathUrl}`;
-    res.setHeader('Cache-Control', 'no-store');
-    return res.render('blog/index', { origin, pathUrl, title, description, canonical, items, page, limit, total, gsc: process.env.GOOGLE_SITE_VERIFICATION || '' });
+    const canonical = page > 1 ? `${origin}${pathUrl}?page=${page}` : `${origin}${pathUrl}`;
+    const prevUrl = page > 1 ? `${pathUrl}?page=${page - 1}` : null;
+    const nextUrl = (page * limit < total) ? `${pathUrl}?page=${page + 1}` : null;
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    return res.render('blog/index', { origin, pathUrl, title, description, canonical, items, page, limit, total, gsc: process.env.GOOGLE_SITE_VERIFICATION || '', prevUrl, nextUrl });
   } catch (err) {
     return res.status(500).send('<!doctype html><html><body><p>Erreur serveur.</p></body></html>');
   }
@@ -755,9 +757,11 @@ app.get('/blog/tag/:tag', async (req, res) => {
     const pathUrl = `/blog/tag/${encodeURIComponent(tag)}`;
     const title = `Articles tag: ${raw} — Car Parts France`;
     const description = `Tous nos articles liés à ${raw}.`;
-    const canonical = `${origin}${pathUrl}`;
+    const canonical = page > 1 ? `${origin}${pathUrl}?page=${page}` : `${origin}${pathUrl}`;
+    const prevUrl = page > 1 ? `${pathUrl}?page=${page - 1}` : null;
+    const nextUrl = (page * limit < total) ? `${pathUrl}?page=${page + 1}` : null;
     res.setHeader('Cache-Control', 'public, max-age=300');
-    return res.render('blog/index', { origin, pathUrl, title, description, canonical, items, page, limit, total });
+    return res.render('blog/index', { origin, pathUrl, title, description, canonical, items, page, limit, total, gsc: process.env.GOOGLE_SITE_VERIFICATION || '', prevUrl, nextUrl });
   } catch (err) {
     return res.status(500).send('<!doctype html><html><body><p>Erreur serveur.</p></body></html>');
   }
@@ -803,7 +807,7 @@ app.get('/blog/:slug', async (req, res) => {
         next = await col.findOne({ status: 'published', slug: { $ne: slug }, publishedAt: { $gt: doc.publishedAt } }, { projection: { title: 1, slug: 1 } , sort: { publishedAt: 1 } });
       }
     } catch {}
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'public, max-age=300');
     return res.render('blog/post', { origin, pathUrl, title, description, canonical, ogImage, noindex, post: doc, related, prev, next, gsc: process.env.GOOGLE_SITE_VERIFICATION || '' });
   } catch (err) {
     return res.status(500).send('<!doctype html><html><body><p>Erreur serveur.</p></body></html>');
