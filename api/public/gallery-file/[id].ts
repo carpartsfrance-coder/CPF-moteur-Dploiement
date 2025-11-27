@@ -24,10 +24,26 @@ export default async function handler(req: any, res: any) {
     const fileDoc = await bucket.find({ _id }).limit(1).toArray().then((arr: any[]) => arr[0] || null);
     if (!fileDoc) return res.status(404).send('Not Found');
 
-    const contentType = fileDoc.contentType || fileDoc.metadata?.contentType || 'application/octet-stream';
-    res.setHeader('Content-Type', contentType);
+    const name: string = String(fileDoc.filename || '');
+    const ext = name.split('.').pop()?.toLowerCase() || '';
+    const inferFromExt = (e: string) => {
+      if (e === 'jpg' || e === 'jpeg') return 'image/jpeg';
+      if (e === 'png') return 'image/png';
+      if (e === 'webp') return 'image/webp';
+      if (e === 'gif') return 'image/gif';
+      if (e === 'svg') return 'image/svg+xml';
+      return 'application/octet-stream';
+    };
+    const originalType = fileDoc.contentType || fileDoc.metadata?.contentType || inferFromExt(ext);
+    const size = Number(fileDoc.length || 0);
+
+    res.statusCode = 200;
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Content-Type', originalType);
+    if (size && Number.isFinite(size)) {
+      try { res.setHeader('Content-Length', String(size)); } catch {}
+    }
 
     const stream = bucket.openDownloadStream(_id);
     stream.on('error', () => res.status(404).end());
