@@ -9,7 +9,6 @@ const BottomGallery: React.FC = () => {
   const upSm = useMediaQuery(theme.breakpoints.up('sm'));
   const cols = upMd ? 3 : upSm ? 2 : 1;
   const [files, setFiles] = React.useState<Array<{ url: string; name?: string }> | null>(null);
-  const [error, setError] = React.useState<string>('');
 
   const getPrefix = React.useCallback(() => {
       const env = process.env.REACT_APP_BACKEND_URL || '';
@@ -29,7 +28,6 @@ const BottomGallery: React.FC = () => {
         if (j && j.ok && Array.isArray(j.images)) setFiles(j.images);
         else setFiles([]);
       } catch (e) {
-        setError('');
         setFiles([]);
       }
     };
@@ -60,12 +58,20 @@ const BottomGallery: React.FC = () => {
             {files.map((it) => {
               const raw = it.url || '';
               const remapped = raw.startsWith('/gallery-file/') ? `/api/public${raw}` : raw;
-              const finalUrl = remapped.startsWith('/') ? `${getPrefix()}${remapped}` : remapped;
+              const baseUrl = remapped.startsWith('/') ? `${getPrefix()}${remapped}` : remapped;
+              const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+              const approxCol = (typeof window !== 'undefined' && window.innerWidth) ? Math.max(320, Math.min(800, Math.floor(window.innerWidth * 0.9 / cols))) : (cols === 3 ? 400 : cols === 2 ? 520 : 720);
+              const w1x = Math.max(320, Math.min(2000, Math.round(approxCol)));
+              const w2x = Math.max(320, Math.min(2000, Math.round(approxCol * 2)));
+              const url1x = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}w=${w1x}&q=82`;
+              const url2x = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}w=${w2x}&q=82`;
               return (
                 <ImageListItem key={raw}>
                   <Box
                     component="img"
-                    src={finalUrl}
+                    src={dpr > 1.2 ? url2x : url1x}
+                    srcSet={`${url1x} 1x, ${url2x} 2x`}
+                    sizes={cols === 1 ? '100vw' : cols === 2 ? '50vw' : '33vw'}
                     alt={it.name || 'Photo atelier'}
                     loading="lazy"
                     decoding="async"

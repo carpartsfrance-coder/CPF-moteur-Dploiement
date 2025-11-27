@@ -37,17 +37,57 @@ export default async function handler(req: any, res: any) {
     const originalType = fileDoc.contentType || fileDoc.metadata?.contentType || inferFromExt(ext);
     const size = Number(fileDoc.length || 0);
 
+    // lecture des query params (w, q)
+    let w: number | undefined = undefined;
+    let q: number | undefined = undefined;
+    if (req?.query) {
+      const qw = (req.query as any).w;
+      const qq = (req.query as any).q;
+      if (typeof qw === 'string' && /^\d+$/.test(qw)) w = Math.max(320, Math.min(2000, parseInt(qw, 10)));
+      if (typeof qq === 'string' && /^\d+$/.test(qq)) q = Math.max(50, Math.min(90, parseInt(qq, 10)));
+    }
+    if ((!w || !q) && typeof req?.url === 'string') {
+      try {
+        const u = new URL(req.url, 'http://x');
+        const sw = u.searchParams.get('w');
+        const sq = u.searchParams.get('q');
+        if (!w && sw && /^\d+$/.test(sw)) w = Math.max(320, Math.min(2000, parseInt(sw, 10)));
+        if (!q && sq && /^\d+$/.test(sq)) q = Math.max(50, Math.min(90, parseInt(sq, 10)));
+      } catch {}
+    }
+
     res.statusCode = 200;
-    // éviter les 304 liés au cache du CDN/navigateur et forcer l'envoi du corps binaire
-    res.setHeader('Cache-Control', 'no-store');
+    // cache long côté CDN/navigateur (les ids GridFS sont immuables)
+    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
     res.setHeader('Content-Disposition', 'inline');
+
+    const stream = bucket.openDownloadStream(_id);
+    stream.on('error', () => res.status(404).end());
+
+    if (w) {
+      // redimensionnement/optimisation à la volée en WebP
+      try {
+        const sharp = (await import('sharp')).default;
+        res.setHeader('Content-Type', 'image/webp');
+        const quality = q ?? 82;
+        return void stream
+          .pipe(sharp().resize({ width: w, withoutEnlargement: true }).webp({ quality }))
+          .pipe(res);
+      } catch {
+        // fallback sans transfo
+        res.setHeader('Content-Type', originalType);
+        if (size && Number.isFinite(size)) {
+          try { res.setHeader('Content-Length', String(size)); } catch {}
+        }
+        return void stream.pipe(res);
+      }
+    }
+
+    // pas de redimensionnement demandé: servir brut
     res.setHeader('Content-Type', originalType);
     if (size && Number.isFinite(size)) {
       try { res.setHeader('Content-Length', String(size)); } catch {}
     }
-
-    const stream = bucket.openDownloadStream(_id);
-    stream.on('error', () => res.status(404).end());
     stream.pipe(res);
   } catch (err: any) {
     console.error('[vercel gallery-file] error', err?.message || err);
