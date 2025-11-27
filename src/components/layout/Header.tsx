@@ -55,6 +55,7 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const inAdmin = (location.pathname || '').startsWith('/admin');
+  const pathname = location.pathname || '/';
   
   useEffect(() => {
     const handleScroll = () => {
@@ -222,18 +223,20 @@ const Header: React.FC = () => {
         <AppBar 
           position="fixed" 
           color="default" 
-          elevation={scrolled ? 4 : 0}
+          elevation={scrolled ? 6 : 0}
           sx={{
             transition: 'all 0.3s ease-in-out',
-            bgcolor: scrolled ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.98)',
-            borderBottom: scrolled ? 'none' : '1px solid rgba(0, 0, 0, 0.05)',
+            bgcolor: scrolled ? 'rgba(255,255,255,0.98)' : 'rgba(255,255,255,0.7)',
+            backdropFilter: 'saturate(180%) blur(10px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(10px)',
+            borderBottom: scrolled ? '1px solid rgba(0,0,0,0.06)' : '1px solid rgba(0, 0, 0, 0.04)',
           }}
         >
           <Container maxWidth="lg">
-            <Toolbar disableGutters sx={{ py: 1 }}>
+            <Toolbar disableGutters sx={{ py: 0.75, minHeight: { xs: 64, md: 72 } }}>
               <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
                 <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
-                  <Box component="img" src="/images/logo.png" alt="Car Parts France" sx={{ height: { xs: 40, sm: 50 }, mr: 1 }} />
+                  <Box component="img" src="/images/logo.png" alt="Car Parts France" sx={{ height: { xs: 40, sm: 48 }, mr: 1 }} />
                 </Box>
               </Box>
 
@@ -268,15 +271,16 @@ const Header: React.FC = () => {
                       to="/" 
                       color="inherit" 
                       sx={{ 
-                        fontWeight: 600,
+                        fontWeight: 700,
                         position: 'relative',
+                        color: pathname === '/' ? 'primary.main' : 'inherit',
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           bottom: 0,
                           left: '50%',
                           transform: 'translateX(-50%)',
-                          width: '0%',
+                          width: pathname === '/' ? '80%' : '0%',
                           height: '3px',
                           bgcolor: 'primary.main',
                           transition: 'width 0.3s ease-in-out',
@@ -293,15 +297,16 @@ const Header: React.FC = () => {
                       to="/a-propos" 
                       color="inherit"
                       sx={{ 
-                        fontWeight: 600,
+                        fontWeight: 700,
                         position: 'relative',
+                        color: pathname === '/a-propos' ? 'primary.main' : 'inherit',
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           bottom: 0,
                           left: '50%',
                           transform: 'translateX(-50%)',
-                          width: '0%',
+                          width: pathname === '/a-propos' ? '80%' : '0%',
                           height: '3px',
                           bgcolor: 'primary.main',
                           transition: 'width 0.3s ease-in-out',
@@ -318,15 +323,16 @@ const Header: React.FC = () => {
                       to="/tests-moteurs" 
                       color="inherit"
                       sx={{ 
-                        fontWeight: 600,
+                        fontWeight: 700,
                         position: 'relative',
+                        color: pathname === '/tests-moteurs' ? 'primary.main' : 'inherit',
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           bottom: 0,
                           left: '50%',
                           transform: 'translateX(-50%)',
-                          width: '0%',
+                          width: pathname === '/tests-moteurs' ? '80%' : '0%',
                           height: '3px',
                           bgcolor: 'primary.main',
                           transition: 'width 0.3s ease-in-out',
@@ -343,15 +349,16 @@ const Header: React.FC = () => {
                       to="/contact" 
                       color="inherit"
                       sx={{ 
-                        fontWeight: 600,
+                        fontWeight: 700,
                         position: 'relative',
+                        color: pathname === '/contact' ? 'primary.main' : 'inherit',
                         '&::after': {
                           content: '""',
                           position: 'absolute',
                           bottom: 0,
                           left: '50%',
                           transform: 'translateX(-50%)',
-                          width: '0%',
+                          width: pathname === '/contact' ? '80%' : '0%',
                           height: '3px',
                           bgcolor: 'primary.main',
                           transition: 'width 0.3s ease-in-out',
@@ -368,7 +375,7 @@ const Header: React.FC = () => {
                       href="/demande-devis"
                       variant="contained" 
                       color="primary" 
-                      sx={{ ml: 2, px: 3 }}
+                      sx={{ ml: 2, px: 3, borderRadius: 999, boxShadow: '0 8px 18px rgba(37, 99, 235, 0.25)', '&:hover': { boxShadow: '0 12px 26px rgba(37, 99, 235, 0.32)' } }}
                     >
                       Demander un devis
                     </Button>
@@ -378,7 +385,7 @@ const Header: React.FC = () => {
                       component="a" 
                       href="tel:0465845488"
                       startIcon={<PhoneIcon />}
-                      sx={{ ml: 2 }}
+                      sx={{ ml: 2, borderRadius: 999 }}
                     >
                       04 65 84 54 88
                     </Button>

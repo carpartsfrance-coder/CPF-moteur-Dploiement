@@ -302,6 +302,33 @@ if (GALLERY_DIR) {
     }
   });
 
+  // Liste les fichiers images disponibles dans GALLERY_DIR (récursif)
+  app.get('/api/public/gallery-files', async (req, res) => {
+    try {
+      const allowed = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif']);
+      const out = [];
+      const walk = (dir) => {
+        let entries = [];
+        try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+        for (const ent of entries) {
+          const full = path.join(dir, ent.name);
+          if (ent.isDirectory()) { walk(full); continue; }
+          const ext = path.extname(ent.name).toLowerCase();
+          if (!allowed.has(ext)) continue;
+          const rel = path.relative(GALLERY_DIR, full).split(path.sep).join('/');
+          out.push(rel);
+        }
+      };
+      walk(GALLERY_DIR);
+      out.sort();
+      res.setHeader('Cache-Control', 'public, max-age=60');
+      return res.json({ ok: true, files: out });
+    } catch (e) {
+      console.error('[gallery-files] error', e);
+      return res.status(500).json({ ok: false, files: [] });
+    }
+  });
+
   // Blog par catégorie
   app.get('/blog/categorie/:cat', async (req, res) => {
     try {
