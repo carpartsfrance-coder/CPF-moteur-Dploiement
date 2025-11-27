@@ -18,7 +18,8 @@ import {
   InputLabel,
   Stack,
   Chip,
-  CircularProgress
+  CircularProgress,
+  Checkbox
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -50,6 +51,7 @@ const AdminGallery: React.FC = () => {
   const [items, setItems] = useState<AdminItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const headers = useMemo(() => ({
     'Content-Type': 'application/json',
@@ -59,11 +61,12 @@ const AdminGallery: React.FC = () => {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${base}/api/gallery/admin`, { headers, credentials: 'include' });
+      const res = await fetch(`${base}/api/admin/gallery-list`, { headers, credentials: 'include' });
       if (!res.ok) throw new Error('HTTP');
       const data = await res.json();
       const arr: AdminItem[] = Array.isArray(data?.items) ? data.items : [];
       setItems(arr);
+      setSelected(new Set());
     } catch (e) {
       setItems([]);
     } finally {
@@ -80,14 +83,14 @@ const AdminGallery: React.FC = () => {
     // eslint-disable-next-line no-restricted-globals
     if (!confirm('Supprimer cette image ?')) return;
     try {
-      await fetch(`${base}/api/gallery/${id}`, { method: 'DELETE', headers, credentials: 'include' });
+      await fetch(`${base}/api/admin/gallery/${id}`, { method: 'DELETE', headers, credentials: 'include' });
       await load();
     } catch {}
   };
 
   const handleStatus = async (id: string, status: string) => {
     try {
-      await fetch(`${base}/api/gallery/${id}`, { method: 'PATCH', headers, credentials: 'include', body: JSON.stringify({ status }) });
+      await fetch(`${base}/api/admin/gallery/${id}`, { method: 'PATCH', headers, credentials: 'include', body: JSON.stringify({ status }) });
       setItems((prev) => prev.map((it) => (it.id === id ? { ...it, status } : it)));
     } catch {}
   };
@@ -100,23 +103,59 @@ const AdminGallery: React.FC = () => {
     reader.readAsDataURL(file);
   });
 
+  const parseDataUrl = (dataUrl: string) => {
+    try {
+      const m = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+      if (!m) return { contentType: 'application/octet-stream', base64: dataUrl };
+      return { contentType: m[1], base64: m[2] };
+    } catch {
+      return { contentType: 'application/octet-stream', base64: dataUrl };
+    }
+  };
+
   const onUploadFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     try {
       setUploading(true);
       for (const file of Array.from(files)) {
-        const content = await readAsDataURL(file);
-        await fetch(`${base}/api/gallery/upload`, {
+        const dataUrl = await readAsDataURL(file);
+        const { contentType, base64 } = parseDataUrl(dataUrl);
+        await fetch(`${base}/api/admin/gallery-upload`, {
           method: 'POST',
           headers,
           credentials: 'include',
-          body: JSON.stringify({ filename: file.name, content }),
+          body: JSON.stringify({ name: file.name, contentType, base64 }),
         });
       }
       await load();
     } catch {} finally {
       setUploading(false);
     }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelected(new Set(items.map((i) => i.id)));
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const bulkDelete = async () => {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    // eslint-disable-next-line no-restricted-globals
+    if (!confirm(`Supprimer ${ids.length} image(s) ?`)) return;
+    for (const id of ids) {
+      try { await fetch(`${base}/api/admin/gallery/${id}`, { method: 'DELETE', headers, credentials: 'include' }); } catch {}
+    }
+    await load();
   };
 
   return (
@@ -133,6 +172,12 @@ const AdminGallery: React.FC = () => {
             Importer des images
             <input hidden accept="image/*" multiple type="file" onChange={(e) => onUploadFiles(e.target.files)} />
           </Button>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip label={`${selected.size} sélectionnée(s)`} size="small" />
+            <Button size="small" onClick={selectAll} disabled={!items.length}>Tout sélectionner</Button>
+            <Button size="small" onClick={clearSelection} disabled={!selected.size}>Tout désélectionner</Button>
+            <Button size="small" color="error" onClick={bulkDelete} disabled={!selected.size}>Supprimer la sélection</Button>
+          </Stack>
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
           Astuce: configurez REACT_APP_BACKEND_URL et REACT_APP_BACKEND_TOKEN côté front. Les images sont servies via GridFS.
@@ -159,7 +204,7 @@ const AdminGallery: React.FC = () => {
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <CardMedia
                   component="img"
-                  image={`${base}${it.url}`}
+                  image={`${base}${it.url}?w=400&q=82`}
                   alt={it.filename}
                   sx={{ aspectRatio: '4/3', objectFit: 'cover' }}
                 />
@@ -189,6 +234,11 @@ const AdminGallery: React.FC = () => {
                   </FormControl>
                 </CardContent>
                 <CardActions>
+                  <Checkbox
+                    checked={selected.has(it.id)}
+                    onChange={() => toggleSelect(it.id)}
+                    inputProps={{ 'aria-label': 'Sélectionner' }}
+                  />
                   <Tooltip title="Copier l'URL">
                     <IconButton onClick={() => navigator.clipboard.writeText(`${base}${it.url}`)}>
                       <ContentCopyIcon />
