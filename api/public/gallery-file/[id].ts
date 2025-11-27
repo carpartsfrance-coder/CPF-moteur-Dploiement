@@ -38,7 +38,8 @@ export default async function handler(req: any, res: any) {
     const size = Number(fileDoc.length || 0);
 
     res.statusCode = 200;
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    // éviter les 304 liés au cache du CDN/navigateur et forcer l'envoi du corps binaire
+    res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Disposition', 'inline');
     res.setHeader('Content-Type', originalType);
     if (size && Number.isFinite(size)) {
