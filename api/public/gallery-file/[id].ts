@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { getDb, getGalleryBucket } from '../../_lib/mongo';
+import { getDb, getGalleryBucket } from '../../_lib/mongo.js';
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') {
