@@ -177,7 +177,8 @@ const MotorsShowcaseSection: React.FC = () => {
   return (
     <Box 
       sx={{ 
-        pt: 2, // Léger padding pour créer un espace minimal avec la section précédente
+        mt: { xs: 6, md: 10 },
+        pt: { xs: 4, md: 6 },
         pb: 6, // Réduction supplémentaire du padding bottom pour diminuer l'espace avant la section suivante
         position: 'relative',
         overflow: 'hidden',

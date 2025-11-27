@@ -1,20 +1,22 @@
 import React from 'react';
 import {
   Box,
-  Container,
-  Typography,
-  Paper,
-  TextField,
   Button,
+  Container,
   Divider,
-  useTheme,
-  InputAdornment
+  InputAdornment,
+  Paper,
+  Snackbar,
+  TextField,
+  Typography,
+  useTheme
 } from '@mui/material';
-import { Snackbar, Alert } from '@mui/material';
+import Alert from '@mui/material/Alert';
 import axios from 'axios';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { addQuote } from '../../utils/quotesStore';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
@@ -821,8 +823,12 @@ const QuoteFormSection: React.FC = () => {
                                   }
                                 }}
                               >
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>{option.desc}</Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
+                                  {selected && (
+                                    <CheckCircleIcon sx={{ color: '#2563EB', fontSize: 18 }} />
+                                  )}
+                                </Box>
                               </Paper>
                             );
                           })}

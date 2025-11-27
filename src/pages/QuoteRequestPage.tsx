@@ -353,11 +353,9 @@ const QuoteRequestPage: React.FC = () => {
                             {[{
                               value: 'full',
                               label: 'Moteur complet',
-                              desc: 'Bloc avec périphériques essentiels.'
                             }, {
                               value: 'bare',
                               label: 'Moteur nu',
-                              desc: 'Bloc court seul, accessoires à reprendre.'
                             }].map((option) => {
                               const selected = values.enginePackage === option.value;
                               return (
@@ -385,7 +383,6 @@ const QuoteRequestPage: React.FC = () => {
                                   }}
                                 >
                                   <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
-                                  <Typography variant="caption" color="text.secondary">{option.desc}</Typography>
                                 </Paper>
                               );
                             })}

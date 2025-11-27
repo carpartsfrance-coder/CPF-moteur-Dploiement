@@ -5,13 +5,11 @@ import { styled } from '@mui/material/styles';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PhoneIcon from '@mui/icons-material/Phone';
 import { motion } from 'framer-motion';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
-import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { addQuote } from '../../utils/quotesStore';
 
 type EnginePackageOption = {
@@ -49,7 +47,7 @@ const HeroSection: React.FC = () => {
   const [qPhone, setQPhone] = React.useState('');
   const [qEmail, setQEmail] = React.useState('');
   const [qVehicle, setQVehicle] = React.useState('');
-  const [qPackage, setQPackage] = React.useState(PACKAGE_OPTIONS[0].value);
+  const [qPackage, setQPackage] = React.useState('');
   const [showErrors, setShowErrors] = React.useState(false);
   const [snackOpen, setSnackOpen] = React.useState(false);
   const [snackMessage, setSnackMessage] = React.useState('');
@@ -59,11 +57,12 @@ const HeroSection: React.FC = () => {
     const phone = qPhone.trim();
     const vehicleId = qVehicle.trim();
     const email = qEmail.trim();
-    const packageLabel = PACKAGE_OPTIONS.find((opt) => opt.value === qPackage)?.label || PACKAGE_OPTIONS[0].label;
-    const message = `Configuration souhaitée : ${packageLabel}`;
+    const selectedOption = PACKAGE_OPTIONS.find((opt) => opt.value === qPackage);
+    const packageLabel = selectedOption?.label || '';
+    const message = packageLabel ? `Configuration souhaitée : ${packageLabel}` : '';
 
-    // Validation minimale: plaque/châssis/code requis ET (téléphone OU email)
-    if (!vehicleId || (!phone && !email)) {
+    // Validation minimale: plaque/châssis/code requis ET (téléphone OU email) ET type de moteur
+    if (!vehicleId || (!phone && !email) || !qPackage) {
       setShowErrors(true);
       return;
     }
@@ -177,8 +176,8 @@ const HeroSection: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         overflow: 'hidden',
-        pt: { xs: 12, md: 0 },
-        pb: { xs: 6, md: 0 },
+        pt: { xs: 16, md: 8 },
+        pb: { xs: 14, md: 12 },
       }}
     >
       {/* Arrière-plan avec overlay */}
@@ -596,6 +595,9 @@ const HeroSection: React.FC = () => {
                           }}
                           sx={{ '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: 2 } }}
                         />
+                        <Typography variant="caption" sx={{ color: 'rgba(148,163,184,0.95)', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+                          Sélectionnez le type de moteur
+                        </Typography>
                         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                           {PACKAGE_OPTIONS.map((option) => {
                             const selected = qPackage === option.value;
@@ -610,26 +612,41 @@ const HeroSection: React.FC = () => {
                                   textAlign: 'left',
                                   p: 1.5,
                                   borderRadius: 1.5,
-                                  border: selected ? '2px solid rgba(59,130,246,0.9)' : '1px solid rgba(255,255,255,0.25)',
-                                  bgcolor: selected ? 'rgba(37,99,235,0.25)' : 'rgba(15,23,42,0.45)',
-                                  color: 'white',
+                                  border: selected
+                                    ? '2px solid rgba(191,219,254,0.9)'
+                                    : (showErrors && !qPackage ? '1px solid rgba(239,68,68,0.6)' : '1px solid rgba(148,163,184,0.35)'),
+                                  bgcolor: selected
+                                    ? 'linear-gradient(135deg, #1d4ed8, #1e40af)'
+                                    : '#ffffff',
+                                  color: '#0f172a',
                                   cursor: 'pointer',
                                   display: 'flex',
                                   flexDirection: 'column',
                                   gap: 0.3,
+                                  boxShadow: selected ? '0 12px 30px rgba(37,99,235,0.35)' : 'none',
                                   transition: 'all .2s ease',
                                   '&:hover': {
-                                    borderColor: 'rgba(59,130,246,0.9)',
-                                    bgcolor: 'rgba(37,99,235,0.3)'
+                                    borderColor: selected ? 'rgba(191,219,254,1)' : 'rgba(59,130,246,0.8)',
+                                    bgcolor: selected ? 'linear-gradient(135deg, #1e40af, #312e81)' : '#f8fafc'
                                   }
                                 }}
                               >
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)' }}>{option.desc}</Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
+                                  {selected && (
+                                    <CheckCircleIcon sx={{ color: '#22c55e', fontSize: 20 }} />
+                                  )}
+                                </Box>
+                                
                               </Paper>
                             );
                           })}
                         </Stack>
+                        {showErrors && !qPackage && (
+                          <Typography variant="caption" sx={{ color: '#ef4444' }}>
+                            Veuillez sélectionner une option
+                          </Typography>
+                        )}
                         <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.6, mt: 1 }}>
                           Coordonnées
                         </Typography>
@@ -714,77 +731,6 @@ const HeroSection: React.FC = () => {
                           Réponse sous 24h — sans engagement
                         </Typography>
                       </Stack>
-                    </Box>
-
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: 'rgba(255,255,255,0.9)',
-                        textTransform: 'uppercase',
-                        letterSpacing: 0.6,
-                        display: 'block',
-                        mb: 0.75,
-                        maxWidth: 483,
-                        ml: 'auto',
-                        mr: { md: '10%' }
-                      }}
-                    >
-                      Pourquoi nous choisir ?
-                    </Typography>
-                    <Box
-                      sx={{
-                        background: 'rgba(255,255,255,0.98)',
-                        border: '1px solid rgba(37,99,235,0.20)',
-                        borderRadius: '18px',
-                        px: 2,
-                        py: 1.1,
-                        boxShadow: '0 12px 24px rgba(15,23,42,0.18)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        flexWrap: 'wrap',
-                        maxWidth: 483,
-                        width: '100%',
-                        ml: 'auto',
-                        mr: { md: '10%' }
-                      }}
-                    >
-                      <Chip
-                        icon={<ShieldOutlinedIcon sx={{ color: 'success.main', fontSize: 20 }} />}
-                        label="Garantie 1 an"
-                        sx={{
-                          bgcolor: 'rgba(16,185,129,0.10)',
-                          color: 'text.primary',
-                          border: '1px solid rgba(16,185,129,0.25)',
-                          boxShadow: 'none',
-                          fontWeight: 700,
-                          '& .MuiChip-label': { px: 1.25 }
-                        }}
-                      />
-                      <Chip
-                        icon={<AccessTimeIcon sx={{ color: 'primary.main', fontSize: 20 }} />}
-                        label="Réponse 24h"
-                        sx={{
-                          bgcolor: 'rgba(37,99,235,0.10)',
-                          color: 'text.primary',
-                          border: '1px solid rgba(37,99,235,0.25)',
-                          boxShadow: 'none',
-                          fontWeight: 700,
-                          '& .MuiChip-label': { px: 1.25 }
-                        }}
-                      />
-                      <Chip
-                        icon={<LocalShippingOutlinedIcon sx={{ color: 'info.main', fontSize: 20 }} />}
-                        label="Livraison rapide"
-                        sx={{
-                          bgcolor: 'rgba(14,165,233,0.10)',
-                          color: 'text.primary',
-                          border: '1px solid rgba(14,165,233,0.25)',
-                          boxShadow: 'none',
-                          fontWeight: 700,
-                          '& .MuiChip-label': { px: 1.25 }
-                        }}
-                      />
                     </Box>
 
                     {/* Version mobile: CTA unique au lieu du mini-formulaire */}
