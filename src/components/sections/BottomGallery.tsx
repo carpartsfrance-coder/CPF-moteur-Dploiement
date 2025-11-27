@@ -57,18 +57,23 @@ const BottomGallery: React.FC = () => {
           </Typography>
         ) : (
           <ImageList variant="masonry" cols={cols} gap={16}>
-            {files.map((it) => (
-              <ImageListItem key={it.url}>
-                <Box
-                  component="img"
-                  src={(it.url || '').startsWith('/') ? `${getPrefix()}${it.url}` : it.url}
-                  alt={it.name || 'Photo atelier'}
-                  loading="lazy"
-                  decoding="async"
-                  sx={{ width: '100%', borderRadius: 2, boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}
-                />
-              </ImageListItem>
-            ))}
+            {files.map((it) => {
+              const raw = it.url || '';
+              const remapped = raw.startsWith('/gallery-file/') ? `/api/public${raw}` : raw;
+              const finalUrl = remapped.startsWith('/') ? `${getPrefix()}${remapped}` : remapped;
+              return (
+                <ImageListItem key={raw}>
+                  <Box
+                    component="img"
+                    src={finalUrl}
+                    alt={it.name || 'Photo atelier'}
+                    loading="lazy"
+                    decoding="async"
+                    sx={{ width: '100%', borderRadius: 2, boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}
+                  />
+                </ImageListItem>
+              );
+            })}
           </ImageList>
         )}
       </Container>
