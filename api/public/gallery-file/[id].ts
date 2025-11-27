@@ -7,7 +7,12 @@ export default async function handler(req: any, res: any) {
     return res.status(405).send('Method Not Allowed');
   }
   try {
-    const { id } = req.query || {};
+    let id: string | undefined = undefined;
+    if (req?.query && typeof req.query.id === 'string') id = req.query.id;
+    if (!id && typeof req?.url === 'string') {
+      const m = req.url.match(/\/gallery-file\/([^/?#]+)/);
+      if (m) id = m[1];
+    }
     if (!id || typeof id !== 'string') return res.status(400).send('Bad Request');
     const db = await getDb();
     const bucket = getGalleryBucket(db);
@@ -22,6 +27,7 @@ export default async function handler(req: any, res: any) {
     const contentType = fileDoc.contentType || fileDoc.metadata?.contentType || 'application/octet-stream';
     res.setHeader('Content-Type', contentType);
     res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Content-Disposition', 'inline');
 
     const stream = bucket.openDownloadStream(_id);
     stream.on('error', () => res.status(404).end());
