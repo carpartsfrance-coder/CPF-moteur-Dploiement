@@ -8,6 +8,9 @@
   "routes": [
     { "src": "/(sitemap\\.xml|robots\\.txt|reply|gallery-file/.*|gallery-opt/.*|api/.*)", "dest": "/api/[...all].js" },
     { "src": "/blog(?:/.*)?", "dest": "/api/[...all].js" },
+    { "src": "/moteur(?:/.*)?", "dest": "/api/[...all].js" },
+    { "src": "/moteurs(?:/.*)?", "dest": "/api/[...all].js" },
+    { "src": "/codes-moteur(?:/.*)?", "dest": "/api/[...all].js" },
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ]

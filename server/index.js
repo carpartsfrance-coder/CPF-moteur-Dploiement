@@ -921,6 +921,117 @@ app.get('/api/public/gallery', async (req, res) => {
   }
 });
 
+app.post('/api/public/quote-request', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const name = String(b.name || '').trim();
+    const email = String(b.email || '').trim();
+    const phone = String(b.phone || '').trim();
+    const vehicleId = String(b.vehicleId || '').trim();
+    const message = String(b.message || '').trim();
+    const source = String(b.source || '').trim();
+    const createdAt = String(b.createdAt || new Date().toISOString());
+
+    if (!vehicleId || (!phone && !email)) {
+      return res.status(400).json({ ok: false, error: 'invalid_payload' });
+    }
+
+    const ref = 'Q-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+
+    const fromEmail = (process.env.MAILERSEND_FROM_EMAIL || 'contact@cpfmoteur.fr').trim();
+    const fromName = (process.env.MAILERSEND_FROM_NAME || 'Car Parts France').trim();
+    const toEmail = (process.env.MAILERSEND_TO_EMAIL || fromEmail).trim();
+    const replyToEmail = (email || process.env.MAILERSEND_REPLY_TO || fromEmail).trim();
+
+    const subject = `Nouvelle demande de devis ${vehicleId ? '— ' + vehicleId : ''} (${ref})`;
+    const plain = [
+      'Nouvelle demande de devis',
+      `Réf: ${ref}`,
+      `Nom: ${name || '—'}`,
+      `Email: ${email || '—'}`,
+      `Téléphone: ${phone || '—'}`,
+      `Identifiant véhicule: ${vehicleId || '—'}`,
+      `Message: ${message || '—'}`,
+      `Source: ${source || '—'}`,
+      `Créé le: ${createdAt}`,
+    ].join('\n');
+
+    const html = buildReplyEmailHtml({
+      subject,
+      toName: 'Équipe Car Parts France',
+      message: [
+        'Nouvelle demande de devis.',
+        `Réf: ${ref}`,
+        `Nom: ${name || '—'}`,
+        `Email: ${email || '—'}`,
+        `Téléphone: ${phone || '—'}`,
+        `Identifiant véhicule: ${vehicleId || '—'}`,
+        `Message: ${message || '—'}`,
+        `Source: ${source || '—'}`,
+        `Créé le: ${createdAt}`,
+      ].join('\n'),
+      companyName: 'Car Parts France',
+      websiteUrl: process.env.COMPANY_WEBSITE_URL || '',
+      supportEmail: fromEmail,
+    });
+
+    const apiKey = (process.env.MAILERSEND_API_KEY || '').trim();
+    if (!apiKey) console.error('[quote-request] MAILERSEND_API_KEY manquant');
+    const mailer = new MailerSend({ apiKey });
+    const emailParams = new EmailParams()
+      .setFrom(new Sender(fromEmail, fromName))
+      .setTo([new Recipient(toEmail, 'Car Parts France')])
+      .setSubject(subject)
+      .setHtml(html)
+      .setText(plain)
+      .setReplyTo(new Sender(replyToEmail, name || replyToEmail));
+
+    await sendWithRetry(mailer, emailParams, 2);
+
+    if (email) {
+      const userSubject = `Nous avons bien reçu votre demande de devis (${ref})`;
+      const userPlain = [
+        'Merci, nous avons bien reçu votre demande.',
+        `Réf: ${ref}`,
+        `Identifiant véhicule: ${vehicleId || '—'}`,
+        `Message: ${message || '—'}`,
+        'Notre équipe revient vers vous sous 24h ouvrées.'
+      ].join('\n');
+      const userHtml = buildReplyEmailHtml({
+        subject: userSubject,
+        toName: name || '',
+        message: [
+          'Merci, nous avons bien reçu votre demande.',
+          `Réf: ${ref}`,
+          `Identifiant véhicule: ${vehicleId || '—'}`,
+          `Message: ${message || '—'}`,
+          'Notre équipe revient vers vous sous 24h ouvrées.'
+        ].join('\n'),
+        companyName: 'Car Parts France',
+        websiteUrl: process.env.COMPANY_WEBSITE_URL || '',
+        supportEmail: fromEmail,
+      });
+      const userParams = new EmailParams()
+        .setFrom(new Sender(fromEmail, fromName))
+        .setTo([new Recipient(email, name || 'Client')])
+        .setSubject(userSubject)
+        .setHtml(userHtml)
+        .setText(userPlain)
+        .setReplyTo(new Sender(fromEmail, fromName));
+      try { await sendWithRetry(mailer, userParams, 2); } catch (e) { console.error('[quote-request] user-confirmation failed', e?.message || e); }
+    }
+
+    try {
+      setQuoteMeta(ref, { name, email, phone, vehicleId, message, source, createdAt, deliveredAt: new Date().toISOString() });
+    } catch {}
+
+    return res.json({ ok: true, ref });
+  } catch (err) {
+    console.error('[quote-request] error', err);
+    return res.status(500).json({ ok: false, error: 'send_failed' });
+  }
+});
+
 // === SEO: Sitemap et Robots publics ===
 function getWebsiteOrigin() {
   const raw = (process.env.COMPANY_WEBSITE_URL || process.env.FRONTEND_URL || 'http://localhost:3000').trim();

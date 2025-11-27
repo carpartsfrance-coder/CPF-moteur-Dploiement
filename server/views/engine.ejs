@@ -26,10 +26,15 @@
     '@type': 'Product',
     name: page?.seo?.title || page?.title || `Moteur ${page?.brand || page?.marque || ''} ${page?.model || ''} ${page?.code || ''}`.trim(),
     description: description || page?.seoDescription || '',
-    brand: page?.brand || page?.marque || undefined,
+    brand: page?.brand ? { '@type': 'Brand', name: page?.brand } : (page?.marque ? { '@type': 'Brand', name: page?.marque } : undefined),
     sku: page?.code || undefined,
     image: (Array.isArray(imageUrls) && imageUrls.length) ? imageUrls[0] : undefined,
-    url: canonical
+    url: canonical,
+    offers: {
+      '@type': 'Offer',
+      url: canonical,
+      availability: 'https://schema.org/InStock'
+    }
   }) %>
   </script>
 
@@ -43,6 +48,21 @@
       { '@type': 'ListItem', position: 2, name: (page?.marque || page?.brand || 'Moteurs'), item: (origin || '') + '/moteurs/' + (page?.brandSlug || page?.marque ? (page?.brandSlug || (page?.marque && page?.marque.toLowerCase().replace(/[^a-z0-9]+/g,'-'))) : '') },
       { '@type': 'ListItem', position: 3, name: (page?.model || page?.cylindree || 'Modèle'), item: canonical }
     ]
+  }) %>
+  </script>
+  <% } %>
+  <% if (Array.isArray(page?.faq) && page.faq.length) { %>
+  <script type="application/ld+json">
+  <%- JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: (page.faq || []).map(function(f){
+      return {
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a }
+      };
+    })
   }) %>
   </script>
   <% } %>
@@ -66,6 +86,11 @@
     .cta{margin-top:14px;display:inline-block;background:linear-gradient(45deg,#e63946 0%,#ff6b6b 100%);color:#fff;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:700}
     nav.related{margin-top:16px}
     nav.related a{display:inline-block;margin:6px 8px 0 0;padding:8px 12px;border-radius:10px;border:1px solid #e2e8f0;text-decoration:none;color:#0f172a;background:#fff}
+    .buybox .badge{display:inline-block;background:#e2e8f0;color:#0f172a;border-radius:999px;padding:6px 10px;font-size:12px;margin-right:8px}
+    .buybox .lines{display:grid;row-gap:8px}
+    .buybox .btns{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .btn-primary{display:inline-block;min-height:36px;background:linear-gradient(90deg,#e63946,#ff6b6b);color:#fff;text-decoration:none;border-radius:14px;padding:10px 14px;font-weight:800;text-align:center}
+    .btn-outline{display:inline-block;border:1px solid #e2e8f0;border-radius:14px;padding:10px 14px;text-decoration:none;color:#0f172a;background:#fff;text-align:center}
   </style>
 </head>
 <body>
@@ -101,17 +126,20 @@
         <a class="cta" href="/demande-devis?engine=<%= encodeURIComponent(page?.code || '') %>">Demander un devis</a>
       </div>
 
-      <div class="card">
-        <h2>Galerie</h2>
-        <% if (Array.isArray(imageUrls) && imageUrls.length) { %>
-          <div class="images">
-            <% imageUrls.slice(0, 6).forEach(function(src){ %>
-              <img loading="lazy" src="<%= src %>" alt="Moteur <%= page?.code || '' %>">
-            <% }) %>
-          </div>
-        <% } else { %>
-          <p>Aucune image disponible.</p>
-        <% } %>
+      <div class="card buybox">
+        <h2>Fiche produit</h2>
+        <div class="badge">En stock</div>
+        <div class="lines" style="margin-top:8px">
+          <% if (page?.code) { %><div><strong>Référence:</strong> <%= page.code %></div><% } %>
+          <div><strong>Garantie:</strong> 12 mois</div>
+          <div><strong>Livraison:</strong> France entière</div>
+          <div><strong>Compatibilité:</strong> vérifiée via immatriculation/VIN</div>
+        </div>
+        <div class="btns">
+          <a class="btn-primary" href="/demande-devis?engine=<%= encodeURIComponent(page?.code || '') %>">Demander un devis</a>
+          <a class="btn-outline" href="tel:0465845488">Appeler 04 65 84 54 88</a>
+          <a class="btn-outline" href="https://wa.me/330756875025" target="_blank" rel="noopener">WhatsApp</a>
+        </div>
       </div>
     </div>
 
@@ -140,6 +168,19 @@
           <p>Nous fournissons un rapport de test et une garantie. Contactez-nous pour les points de contrôle.</p>
         <% } %>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h2>Galerie</h2>
+      <% if (Array.isArray(imageUrls) && imageUrls.length) { %>
+        <div class="images">
+          <% imageUrls.slice(0, 6).forEach(function(src){ %>
+            <img loading="lazy" src="<%= src %>" alt="Moteur <%= page?.code || '' %>">
+          <% }) %>
+        </div>
+      <% } else { %>
+        <p>Aucune image disponible.</p>
+      <% } %>
     </div>
 
     <% if (Array.isArray(page?.faq) && page.faq.length) { %>
