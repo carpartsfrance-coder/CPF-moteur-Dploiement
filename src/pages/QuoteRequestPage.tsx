@@ -34,7 +34,8 @@ const QuoteSchema = Yup.object({
   email: Yup.string().email('Email invalide'),
   phone: Yup.string(),
   vehicleId: Yup.string().required('Plaque, N° châssis ou code moteur requis'),
-  message: Yup.string().max(1000, '1000 caractères maximum')
+  message: Yup.string().max(1000, '1000 caractères maximum'),
+  enginePackage: Yup.string().required('Sélectionnez une option')
 }).test('contact-required', 'Téléphone ou email requis', (values: any) => {
   const phone = values?.phone?.trim();
   const email = values?.email?.trim();
@@ -149,10 +150,12 @@ const QuoteRequestPage: React.FC = () => {
               <Paper elevation={0} sx={{ flex: 1, p: { xs: 3, md: 4 }, borderRadius: 3, bgcolor: 'rgba(250, 250, 252, 0.9)', border: '1px solid rgba(99, 102, 241, 0.15)', boxShadow: '0 16px 40px rgba(79, 70, 229, 0.08)' }}>
                 <Formik
                   enableReinitialize
-                  initialValues={{ name: '', email: '', phone: '', vehicleId: defaults.vehicleId, message: defaults.message }}
+                  initialValues={{ name: '', email: '', phone: '', vehicleId: defaults.vehicleId, message: defaults.message, enginePackage: 'full' }}
                   validationSchema={QuoteSchema}
                   onSubmit={async (values, { resetForm, setSubmitting }) => {
-                    const message = `Bonjour, je souhaite un devis moteur.\n\n• Nom : ${values.name}\n• Email : ${values.email}\n• Téléphone : ${values.phone}\n• Plaque / N° châssis / Code moteur : ${values.vehicleId}\n• Détails complémentaires : ${values.message || 'Non précisé'}\n\nEnvoyé depuis ${siteLabel}`;
+                    const packageLabel = values.enginePackage === 'bare' ? 'Moteur nu (sans accessoires)' : 'Moteur complet (avec accessoires)';
+                    const fullMessage = [values.message, `Configuration souhaitée : ${packageLabel}`].filter(Boolean).join('\n');
+                    const message = `Bonjour, je souhaite un devis moteur.\n\n• Nom : ${values.name}\n• Email : ${values.email}\n• Téléphone : ${values.phone}\n• Plaque / N° châssis / Code moteur : ${values.vehicleId}\n• Détails complémentaires : ${fullMessage || 'Non précisé'}\n\nEnvoyé depuis ${siteLabel}`;
                     const encoded = encodeURIComponent(message);
                     console.log('Demande de devis envoyée:', values);
 
@@ -168,7 +171,8 @@ const QuoteRequestPage: React.FC = () => {
                             email: values.email,
                             phone: values.phone,
                             vehicleId: values.vehicleId,
-                            message: values.message,
+                            message: fullMessage,
+                            enginePackage: values.enginePackage,
                             source: 'carparts-pro',
                             createdAt: new Date().toISOString(),
                           },
@@ -185,7 +189,7 @@ const QuoteRequestPage: React.FC = () => {
                           email: values.email,
                           phone: values.phone,
                           vehicleId: values.vehicleId,
-                          message: values.message,
+                          message: fullMessage,
                           channel: 'api',
                         });
                         setSnackMessage('Merci, demande reçue. Nous revenons vers vous sous 24h.');
@@ -228,7 +232,7 @@ const QuoteRequestPage: React.FC = () => {
                           email: values.email,
                           phone: values.phone,
                           vehicleId: values.vehicleId,
-                          message: values.message,
+                          message: fullMessage,
                           channel: 'email',
                         });
                         const ref = (r.data && (r.data.ref as string)) || '';
@@ -251,7 +255,7 @@ const QuoteRequestPage: React.FC = () => {
                       email: values.email,
                       phone: values.phone,
                       vehicleId: values.vehicleId,
-                      message: values.message,
+                      message: fullMessage,
                       channel: 'whatsapp',
                     });
 
@@ -341,18 +345,67 @@ const QuoteRequestPage: React.FC = () => {
                           />
                         </Stack>
 
-                        <TextField
-                          fullWidth
-                          multiline
-                          minRows={4}
-                          label="Décrivez votre besoin (kilométrage, référence moteur, options...)"
-                          name="message"
-                          value={values.message}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          error={touched.message && Boolean(errors.message)}
-                          helperText={touched.message && errors.message}
-                        />
+                        <Stack spacing={2}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                            Type de moteur souhaité
+                          </Typography>
+                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                            {[{
+                              value: 'full',
+                              label: 'Moteur complet',
+                              desc: 'Bloc avec périphériques essentiels.'
+                            }, {
+                              value: 'bare',
+                              label: 'Moteur nu',
+                              desc: 'Bloc court seul, accessoires à reprendre.'
+                            }].map((option) => {
+                              const selected = values.enginePackage === option.value;
+                              return (
+                                <Paper
+                                  key={option.value}
+                                  component="button"
+                                  type="button"
+                                  onClick={() => handleChange({ target: { name: 'enginePackage', value: option.value } } as any)}
+                                  onBlur={() => handleBlur({ target: { name: 'enginePackage' } } as any)}
+                                  sx={{
+                                    flex: 1,
+                                    textAlign: 'left',
+                                    p: 1.5,
+                                    borderRadius: 2,
+                                    border: selected ? '2px solid #2563EB' : '1px solid rgba(148,163,184,0.4)',
+                                    bgcolor: selected ? 'rgba(37,99,235,0.06)' : 'rgba(248,250,252,0.9)',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 0.3,
+                                    transition: 'all .2s ease',
+                                    '&:hover': {
+                                      borderColor: 'rgba(37,99,235,0.8)'
+                                    }
+                                  }}
+                                >
+                                  <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
+                                  <Typography variant="caption" color="text.secondary">{option.desc}</Typography>
+                                </Paper>
+                              );
+                            })}
+                          </Stack>
+                          {touched.enginePackage && errors.enginePackage && (
+                            <Typography variant="caption" color="error">{errors.enginePackage}</Typography>
+                          )}
+                          <TextField
+                            fullWidth
+                            multiline
+                            minRows={4}
+                            label="Décrivez votre besoin (kilométrage, référence moteur, options...)"
+                            name="message"
+                            value={values.message}
+                            onChange={handleChange}
+                            onBlur={handleBlur}
+                            error={touched.message && Boolean(errors.message)}
+                            helperText={touched.message && errors.message}
+                          />
+                        </Stack>
 
                         {/* Canal d'envoi retiré: on force WhatsApp (ou API si configurée) */}
 

@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Paper, 
-  TextField, 
-  Button, 
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  TextField,
+  Button,
   Divider,
   useTheme,
   InputAdornment
@@ -141,7 +141,8 @@ const validationSchema = yup.object({
   email: yup.string().email('Email invalide').required("L'email est requis"),
   phone: yup.string().required('Le téléphone est requis'),
   vehicleId: yup.string().required('Plaque, N° châssis ou code moteur requis'),
-  message: yup.string().max(1000, '1000 caractères maximum')
+  message: yup.string().max(1000, '1000 caractères maximum'),
+  enginePackage: yup.string().required('Sélectionnez une option')
 });
 
 const QuoteFormSection: React.FC = () => {
@@ -167,6 +168,19 @@ const QuoteFormSection: React.FC = () => {
     }
   ];
   
+  const packageOptions = [
+    {
+      value: 'full',
+      label: 'Moteur complet',
+      desc: 'Bloc avec périphériques essentiels (injection, turbo, accessoires selon compatibilité).'
+    },
+    {
+      value: 'bare',
+      label: 'Moteur nu',
+      desc: 'Bloc court seul, accessoires à reprendre sur votre moteur ou à commander séparément.'
+    }
+  ];
+
   const formik = useFormik({
     initialValues: {
       name: '',
@@ -174,10 +188,13 @@ const QuoteFormSection: React.FC = () => {
       phone: '',
       vehicleId: '',
       message: '',
+      enginePackage: packageOptions[0].value,
     },
     validationSchema,
     onSubmit: async (values, { setSubmitting }: any = { setSubmitting: () => {} }) => {
-      const messageTxt = `Bonjour, je souhaite un devis moteur.\n\n• Nom : ${values.name}\n• Email : ${values.email}\n• Téléphone : ${values.phone}\n• Plaque / N° châssis / Code moteur : ${values.vehicleId}\n• Détails complémentaires : ${values.message || 'Non précisé'}\n\nEnvoyé depuis carparts-france.com`;
+      const packageLabel = packageOptions.find((opt) => opt.value === values.enginePackage)?.label || packageOptions[0].label;
+      const messageDetails = [values.message, `Configuration souhaitée : ${packageLabel}`].filter(Boolean).join('\n');
+      const messageTxt = `Bonjour, je souhaite un devis moteur.\n\n• Nom : ${values.name}\n• Email : ${values.email}\n• Téléphone : ${values.phone}\n• Plaque / N° châssis / Code moteur : ${values.vehicleId}\n• Détails complémentaires : ${messageDetails || 'Non précisé'}\n\nEnvoyé depuis carparts-france.com`;
       const encoded = encodeURIComponent(messageTxt);
       try {
         const apiUrl = (process as any).env.REACT_APP_QUOTE_API_URL;
@@ -188,7 +205,8 @@ const QuoteFormSection: React.FC = () => {
             email: values.email,
             phone: values.phone,
             vehicleId: values.vehicleId,
-            message: values.message,
+            message: messageDetails,
+            enginePackage: values.enginePackage,
             source: 'carparts-pro',
             createdAt: new Date().toISOString(),
           }, {
@@ -202,7 +220,7 @@ const QuoteFormSection: React.FC = () => {
             email: values.email,
             phone: values.phone,
             vehicleId: values.vehicleId,
-            message: values.message,
+            message: messageDetails,
             channel: 'api',
           });
           try {
@@ -249,7 +267,7 @@ const QuoteFormSection: React.FC = () => {
             email: values.email,
             phone: values.phone,
             vehicleId: values.vehicleId,
-            message: values.message,
+            message: messageDetails,
             channel: 'email',
           });
           const ref = (r.data && (r.data.ref as string)) || '';
@@ -278,7 +296,7 @@ const QuoteFormSection: React.FC = () => {
         email: values.email,
         phone: values.phone,
         vehicleId: values.vehicleId,
-        message: values.message,
+        message: messageDetails,
         channel: 'whatsapp',
       });
       (setSubmitting && setSubmitting(false));
@@ -772,6 +790,46 @@ const QuoteFormSection: React.FC = () => {
                             )
                           }}
                         />
+                      </Box>
+                      <Box sx={{ flex: '1 1 100%' }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                          Type de moteur souhaité
+                        </Typography>
+                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)' }, gap: 1 }}>
+                          {packageOptions.map((option) => {
+                            const selected = formik.values.enginePackage === option.value;
+                            return (
+                              <Paper
+                                key={option.value}
+                                component="button"
+                                type="button"
+                                onClick={() => formik.setFieldValue('enginePackage', option.value)}
+                                onBlur={() => formik.setFieldTouched('enginePackage', true)}
+                                sx={{
+                                  textAlign: 'left',
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  border: selected ? '2px solid #2563EB' : '1px solid rgba(148,163,184,0.4)',
+                                  bgcolor: selected ? 'rgba(37,99,235,0.06)' : 'rgba(248,250,252,0.9)',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 0.35,
+                                  transition: 'all .2s ease',
+                                  '&:hover': {
+                                    borderColor: 'rgba(37,99,235,0.8)'
+                                  }
+                                }}
+                              >
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4 }}>{option.desc}</Typography>
+                              </Paper>
+                            );
+                          })}
+                        </Box>
+                        {formik.touched.enginePackage && formik.errors.enginePackage && (
+                          <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>{formik.errors.enginePackage}</Typography>
+                        )}
                       </Box>
                       <Box sx={{ flex: '1 1 100%' }}>
                         <TextField

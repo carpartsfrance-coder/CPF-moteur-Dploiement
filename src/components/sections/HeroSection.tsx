@@ -1,6 +1,6 @@
 import React from 'react';
 import axios from 'axios';
-import { Box, Container, Typography, Button, useTheme, useMediaQuery, Stack, Chip, TextField, InputAdornment, Snackbar, Alert } from '@mui/material';
+import { Box, Container, Typography, Button, useTheme, useMediaQuery, Stack, Chip, TextField, InputAdornment, Snackbar, Alert, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PhoneIcon from '@mui/icons-material/Phone';
@@ -13,6 +13,25 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import AlternateEmailIcon from '@mui/icons-material/AlternateEmail';
 import { addQuote } from '../../utils/quotesStore';
+
+type EnginePackageOption = {
+  value: string;
+  label: string;
+  desc: string;
+};
+
+const PACKAGE_OPTIONS: EnginePackageOption[] = [
+  {
+    value: 'full',
+    label: 'Moteur complet (avec accessoires)',
+    desc: 'Bloc + périphériques essentiels : injection, turbo, accessoires disponibles.'
+  },
+  {
+    value: 'bare',
+    label: 'Moteur nu (sans accessoires)',
+    desc: 'Bloc court seul. Accessoires à reprendre sur votre moteur ou à commander à part.'
+  }
+];
 
 // Composants animés avec Framer Motion
 const MotionBox = styled(motion.div)({});
@@ -30,6 +49,7 @@ const HeroSection: React.FC = () => {
   const [qPhone, setQPhone] = React.useState('');
   const [qEmail, setQEmail] = React.useState('');
   const [qVehicle, setQVehicle] = React.useState('');
+  const [qPackage, setQPackage] = React.useState(PACKAGE_OPTIONS[0].value);
   const [showErrors, setShowErrors] = React.useState(false);
   const [snackOpen, setSnackOpen] = React.useState(false);
   const [snackMessage, setSnackMessage] = React.useState('');
@@ -39,7 +59,8 @@ const HeroSection: React.FC = () => {
     const phone = qPhone.trim();
     const vehicleId = qVehicle.trim();
     const email = qEmail.trim();
-    const message = '';
+    const packageLabel = PACKAGE_OPTIONS.find((opt) => opt.value === qPackage)?.label || PACKAGE_OPTIONS[0].label;
+    const message = `Configuration souhaitée : ${packageLabel}`;
 
     // Validation minimale: plaque/châssis/code requis ET (téléphone OU email)
     if (!vehicleId || (!phone && !email)) {
@@ -63,6 +84,7 @@ const HeroSection: React.FC = () => {
             phone,
             vehicleId,
             message,
+            enginePackage: qPackage,
             source: 'carparts-pro',
             createdAt: new Date().toISOString(),
           },
@@ -99,6 +121,7 @@ const HeroSection: React.FC = () => {
           phone,
           vehicleId,
           message,
+          enginePackage: qPackage,
           source: 'hero',
           createdAt: new Date().toISOString(),
         },
@@ -119,7 +142,7 @@ const HeroSection: React.FC = () => {
     setSnackMessage("Votre message WhatsApp est prêt. Vérifiez la nouvelle fenêtre pour l’envoyer.");
     setSnackOpen(true);
     addQuote({ name, email, phone, vehicleId, message, channel: 'whatsapp' });
-  }, [qName, qPhone, qEmail, qVehicle, siteLabel]);
+  }, [qName, qPhone, qEmail, qVehicle, qPackage, siteLabel]);
   
   // Variantes d'animation pour les éléments
   const containerVariants = {
@@ -573,7 +596,40 @@ const HeroSection: React.FC = () => {
                           }}
                           sx={{ '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: 2 } }}
                         />
-
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                          {PACKAGE_OPTIONS.map((option) => {
+                            const selected = qPackage === option.value;
+                            return (
+                              <Paper
+                                key={option.value}
+                                component="button"
+                                type="button"
+                                onClick={() => setQPackage(option.value)}
+                                sx={{
+                                  flex: 1,
+                                  textAlign: 'left',
+                                  p: 1.5,
+                                  borderRadius: 1.5,
+                                  border: selected ? '2px solid rgba(59,130,246,0.9)' : '1px solid rgba(255,255,255,0.25)',
+                                  bgcolor: selected ? 'rgba(37,99,235,0.25)' : 'rgba(15,23,42,0.45)',
+                                  color: 'white',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: 0.3,
+                                  transition: 'all .2s ease',
+                                  '&:hover': {
+                                    borderColor: 'rgba(59,130,246,0.9)',
+                                    bgcolor: 'rgba(37,99,235,0.3)'
+                                  }
+                                }}
+                              >
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{option.label}</Typography>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.75)' }}>{option.desc}</Typography>
+                              </Paper>
+                            );
+                          })}
+                        </Stack>
                         <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.6, mt: 1 }}>
                           Coordonnées
                         </Typography>

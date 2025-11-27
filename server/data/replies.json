@@ -95,6 +95,96 @@
       "websiteUrl": "http://localhost:3000",
       "companyName": "Car Parts France",
       "logoUrl": ""
+    },
+    "Q-FEC060": {
+      "name": "Test Utilisateur",
+      "email": "test@example.com",
+      "phone": "+33611111111",
+      "vehicleId": "AB-123-CD",
+      "message": "Test envoi local",
+      "source": "test",
+      "createdAt": "2025-11-27T07:59:00Z",
+      "deliveredAt": "2025-11-27T07:01:56.359Z"
+    },
+    "Q-4C502B": {
+      "name": "",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "",
+      "vehicleId": "FR-122-DF",
+      "message": "",
+      "source": "hero",
+      "createdAt": "2025-11-27T07:02:47.774Z",
+      "deliveredAt": "2025-11-27T07:02:48.857Z"
+    },
+    "Q-2C8B76": {
+      "name": "",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "",
+      "vehicleId": "FR-122-DF",
+      "message": "",
+      "source": "hero",
+      "createdAt": "2025-11-27T07:02:48.921Z",
+      "deliveredAt": "2025-11-27T07:02:49.106Z"
+    },
+    "Q-BA8863": {
+      "name": "Killian Test",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "+33600000000",
+      "vehicleId": "TEST-DEVIS-CPFR",
+      "message": "Test confirmation utilisateur",
+      "source": "test-confirm",
+      "createdAt": "2025-11-27T08:06:00Z",
+      "deliveredAt": "2025-11-27T07:07:48.031Z"
+    },
+    "Q-87C2C1": {
+      "name": "",
+      "email": "k@gmail.com",
+      "phone": "",
+      "vehicleId": "FF-FFF-FF",
+      "message": "",
+      "source": "hero",
+      "createdAt": "2025-11-27T07:14:54.108Z",
+      "deliveredAt": "2025-11-27T07:14:54.588Z"
+    },
+    "Q-25348F": {
+      "name": "",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "",
+      "vehicleId": "FF-FFF-FF",
+      "message": "",
+      "source": "hero",
+      "createdAt": "2025-11-27T07:15:00.740Z",
+      "deliveredAt": "2025-11-27T07:15:01.211Z"
+    },
+    "Q-ACF755": {
+      "name": "Test Logos",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "+33600000000",
+      "vehicleId": "TEST-EMAIL-LOGOS",
+      "message": "Test social proof email",
+      "source": "test-confirm-logos",
+      "createdAt": "2025-11-27T08:33:00Z",
+      "deliveredAt": "2025-11-27T07:34:50.191Z"
+    },
+    "Q-0E9A19": {
+      "name": "",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "",
+      "vehicleId": "FF-RRR-FF",
+      "message": "Configuration souhaitée : Moteur nu (sans accessoires)",
+      "source": "hero",
+      "createdAt": "2025-11-27T11:00:01.185Z",
+      "deliveredAt": "2025-11-27T11:00:01.622Z"
+    },
+    "Q-A2C571": {
+      "name": "",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "",
+      "vehicleId": "FF-RRR-FF",
+      "message": "Configuration souhaitée : Moteur nu (sans accessoires)",
+      "source": "hero",
+      "createdAt": "2025-11-27T11:00:02.202Z",
+      "deliveredAt": "2025-11-27T11:00:02.605Z"
     }
   },
   "1eccc3e1-7b92-45fa-95cc-ee625e67e654": [

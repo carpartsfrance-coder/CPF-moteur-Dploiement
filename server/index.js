@@ -997,6 +997,12 @@ app.post('/api/public/quote-request', async (req, res) => {
         `Message: ${message || '—'}`,
         'Notre équipe revient vers vous sous 24h ouvrées.'
       ].join('\n');
+      const origin = getWebsiteOrigin();
+      const socialLogos = [
+        { src: `${origin}/images/partners/logo-porsche.webp`, alt: 'Centre Porsche Toulon' },
+        { src: `${origin}/images/partners/mougins-autosport.webp`, alt: 'Mougins Autosport' },
+        { src: `${origin}/images/partners/sun-motors.webp`, alt: 'Sun Motors' },
+      ];
       const userHtml = buildReplyEmailHtml({
         subject: userSubject,
         toName: name || '',
@@ -1010,6 +1016,8 @@ app.post('/api/public/quote-request', async (req, res) => {
         companyName: 'Car Parts France',
         websiteUrl: process.env.COMPANY_WEBSITE_URL || '',
         supportEmail: fromEmail,
+        logoUrl: `${origin}/images/logo.png`,
+        socialProof: { logos: socialLogos },
       });
       const userParams = new EmailParams()
         .setFrom(new Sender(fromEmail, fromName))

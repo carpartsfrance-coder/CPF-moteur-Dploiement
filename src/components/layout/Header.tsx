@@ -27,6 +27,7 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import HomeIcon from '@mui/icons-material/Home';
 import ContactsIcon from '@mui/icons-material/Contacts';
 import InfoIcon from '@mui/icons-material/Info';
+import ScienceIcon from '@mui/icons-material/Science';
 import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 
@@ -123,6 +124,13 @@ const Header: React.FC = () => {
             <InfoIcon color="primary" />
           </ListItemIcon>
           <ListItemText primary="À propos" />
+        </ListItem>
+        
+        <ListItem component={RouterLink} to="/tests-moteurs" onClick={() => setDrawerOpen(false)}>
+          <ListItemIcon>
+            <ScienceIcon color="primary" />
+          </ListItemIcon>
+          <ListItemText primary="Tests moteurs" />
         </ListItem>
         
         <ListItem component={RouterLink} to="/contact" onClick={() => setDrawerOpen(false)}>
@@ -304,6 +312,31 @@ const Header: React.FC = () => {
                       }}
                     >
                       À propos
+                    </Button>
+                    <Button 
+                      component={RouterLink} 
+                      to="/tests-moteurs" 
+                      color="inherit"
+                      sx={{ 
+                        fontWeight: 600,
+                        position: 'relative',
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          bottom: 0,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: '0%',
+                          height: '3px',
+                          bgcolor: 'primary.main',
+                          transition: 'width 0.3s ease-in-out',
+                        },
+                        '&:hover::after': {
+                          width: '80%',
+                        }
+                      }}
+                    >
+                      Tests moteurs
                     </Button>
                     <Button 
                       component={RouterLink} 

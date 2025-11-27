@@ -27,6 +27,7 @@ export const buildReplyEmailHtml = ({
   replyLink = '',
   replyNotice = '',
   replyOptions = undefined,
+  socialProof = undefined,
 } = {}) => {
   const rawMessage = String(message || '');
   const safeMessage = escapeHtml(rawMessage).replace(/\n/g, '<br />');
@@ -146,6 +147,13 @@ export const buildReplyEmailHtml = ({
             <div class="badge">Devis personnalisé</div>
             ${!startsWithGreeting && safeToName ? `<p>Bonjour ${safeToName},</p>` : ''}
             <div class="card">${safeMessage}</div>
+            ${socialProof && Array.isArray(socialProof.logos) && socialProof.logos.length ? `
+            <div style="margin-top:14px;border:1px solid ${GREY_200};border-radius:12px;padding:12px 14px;">
+              <div style="font-weight:700;color:${SECONDARY};margin-bottom:8px;">Ils nous font confiance</div>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                ${socialProof.logos.map(l => `<img src="${escapeHtml(String(l.src))}" alt="${escapeHtml(String(l.alt || ''))}" style="height:28px;max-height:32px;object-fit:contain;display:block;" />`).join('')}
+              </div>
+            </div>` : ''}
             ${details && (details.price || details.mileageKm || details.delivery || details.reference) ? `
             <div class="details">
               <div class="details__head">Détails de l'offre</div>

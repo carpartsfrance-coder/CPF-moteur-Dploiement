@@ -23,7 +23,7 @@ import EnginesBrandPage from './pages/EnginesBrandPage';
 import CGVPage from './pages/CGVPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import AboutPage from './pages/AboutPage';
- 
+import TestsMoteursPage from './pages/TestsMoteursPage';
 
 function App() {
   const location = useLocation();
@@ -77,6 +77,9 @@ function App() {
       case '/politique-de-confidentialite':
         setMeta('Politique de confidentialité | Car Parts France Moteur', 'Politique de confidentialité et gestion des données.');
         break;
+      case '/tests-moteurs':
+        setMeta('Tests moteurs en atelier | Car Parts France Moteur', "Compression, leak-down, endoscopie, pression d’huile, rapport fourni, garantie 1 an.");
+        break;
       default:
         if (path.startsWith('/codes-moteur')) {
           setMeta('Code moteur | Car Parts France Moteur', 'Compatibilité, disponibilité et conseils pour votre code moteur.');
@@ -94,6 +97,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/a-propos" element={<AboutPage />} />
+          <Route path="/tests-moteurs" element={<TestsMoteursPage />} />
           <Route path="/demande-devis" element={<QuoteRequestPage />} />
           <Route path="/demande-de-devis" element={<Navigate to="/demande-devis" replace />} />
           <Route path="/mentions-legales" element={<LegalPage />} />
