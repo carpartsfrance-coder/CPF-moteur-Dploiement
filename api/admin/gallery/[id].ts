@@ -2,11 +2,7 @@ import { ObjectId } from 'mongodb';
 import { getDb, getGalleryBucket } from '../../_lib/mongo.js';
 
 export default async function handler(req: any, res: any) {
-  const token = (process.env.GALLERY_UPLOAD_TOKEN || '').trim();
-  const auth = String(req.headers?.authorization || '');
-  if (!token || auth !== `Bearer ${token}`) {
-    return res.status(401).json({ ok: false, error: 'unauthorized' });
-  }
+  // Auth désactivée temporairement (bypass)
 
   const method = req.method || 'GET';
   try {

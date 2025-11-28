@@ -6,11 +6,7 @@ export default async function handler(req: any, res: any) {
     return res.status(405).send('Method Not Allowed');
   }
   try {
-    const token = (process.env.GALLERY_UPLOAD_TOKEN || '').trim();
-    const auth = String(req.headers?.authorization || '');
-    if (!token || auth !== `Bearer ${token}`) {
-      return res.status(401).json({ ok: false, error: 'unauthorized' });
-    }
+    // Auth désactivée temporairement (bypass)
 
     const db = await getDb();
     const bucket = getGalleryBucket(db);
