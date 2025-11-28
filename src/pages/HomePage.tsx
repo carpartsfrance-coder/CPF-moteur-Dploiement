@@ -7,7 +7,6 @@ import InstalledBySection from '../components/sections/InstalledBySection';
 const ComparisonSectionLazy = lazy(() => import('../components/sections/ProblemSection'));
 const MotorsShowcaseSectionLazy = lazy(() => import('../components/sections/MotorsShowcaseSection'));
 const TestsGalleryLazy = lazy(() => import('../components/sections/TestsGallery'));
-const BottomGalleryLazy = lazy(() => import('../components/sections/BottomGallery'));
 
 const LazyOnView: React.FC<{ children: React.ReactNode; rootMargin?: string }> = ({ children, rootMargin = '200px' }) => {
   const [visible, setVisible] = useState(false);
@@ -54,11 +53,6 @@ const HomePage: React.FC = () => {
         </Suspense>
       </LazyOnView>
       <QuoteFormSection />
-      <LazyOnView>
-        <Suspense fallback={<Box sx={{ height: { xs: 360, md: 480 } }} />}> 
-          <BottomGalleryLazy />
-        </Suspense>
-      </LazyOnView>
     </Box>
   );
 };
