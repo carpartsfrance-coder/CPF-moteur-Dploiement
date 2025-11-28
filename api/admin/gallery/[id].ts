@@ -3,6 +3,12 @@ import { getDb, getGalleryBucket } from '../../_lib/mongo.js';
 
 export default async function handler(req: any, res: any) {
   // Auth désactivée temporairement (bypass)
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'DELETE, PATCH, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
 
   const method = req.method || 'GET';
   try {
