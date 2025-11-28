@@ -115,6 +115,115 @@ app.use(async (req, res, next) => {
       await initMongo();
       const red = await mongoDb.collection('redirects').findOne({ from: rawPath });
 
+// === Admin: Cloudflare Images (upload direct, liste, suppression, renommage) ===
+app.post('/api/admin/images/direct-upload', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const name = String((req.body || {}).name || '').trim();
+    const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v2/direct_upload`;
+    const headers = { Authorization: `Bearer ${API_TOKEN}` };
+    let body;
+    if (name) {
+      body = new URLSearchParams({ metadata: JSON.stringify({ name }) });
+    }
+    const r = await fetch(url, { method: 'POST', headers, body });
+    const data = await r.json();
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, result: data.result });
+  } catch (err) {
+    console.error('[admin images direct-upload] error', err);
+    return res.status(500).json({ ok: false, error: 'direct_upload_error' });
+  }
+});
+
+app.get('/api/admin/images/list', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const page = Math.max(1, parseInt(String((req.query || {}).page || '1'), 10) || 1);
+    const perPage = Math.min(100, Math.max(1, parseInt(String((req.query || {}).per_page || '24'), 10) || 24));
+    const url = new URL(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v1`);
+    url.searchParams.set('page', String(page));
+    url.searchParams.set('per_page', String(perPage));
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${API_TOKEN}` } });
+    const data = await r.json();
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, page, per_page: perPage, total: data?.result?.total_count || 0, images: data?.result?.images || [] });
+  } catch (err) {
+    console.error('[admin images list] error', err);
+    return res.status(500).json({ ok: false, error: 'list_error' });
+  }
+});
+
+app.delete('/api/admin/images/:id', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v1/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${API_TOKEN}` } });
+    const data = await r.json();
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[admin images delete] error', err);
+    return res.status(500).json({ ok: false, error: 'delete_error' });
+  }
+});
+
+app.patch('/api/admin/images/:id', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+    const body = req.body || {};
+    const metadata = {};
+    if (typeof body.name === 'string' && body.name.trim()) Object.assign(metadata, { name: body.name.trim() });
+    const payload = {};
+    if (Object.keys(metadata).length) Object.assign(payload, { metadata });
+    if (typeof body.requireSignedURLs === 'boolean') Object.assign(payload, { requireSignedURLs: !!body.requireSignedURLs });
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v1/${id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    return res.json({ ok: true, result: data.result });
+  } catch (err) {
+    console.error('[admin images patch] error', err);
+    return res.status(500).json({ ok: false, error: 'patch_error' });
+  }
+});
+
 // Public: listage des fiches moteurs (recherche + marque + pagination)
 app.get('/api/public/engine-pages', async (req, res) => {
   try {
@@ -267,6 +376,136 @@ app.get('/moteur/:brand/:model', async (req, res) => {
     }
     return next();
   } catch { return next(); }
+});
+
+// === Admin: Cloudflare Images (upload direct, liste, suppression, renommage) — top-level ===
+// Upload en une étape: le front envoie multipart/form-data (file) ici, on proxie vers Cloudflare
+app.post('/api/admin/images/upload', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v1`;
+    const h = { Authorization: `Bearer ${API_TOKEN}` };
+    const ct = String(req.headers['content-type'] || '');
+    if (ct) h['Content-Type'] = ct;
+
+    const r = await fetch(url, { method: 'POST', headers: h, body: req, duplex: 'half' });
+    const text = await r.text();
+    let data; try { data = JSON.parse(text); } catch { data = { success: false, raw: text }; }
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    return res.json({ ok: true, result: data.result });
+  } catch (err) {
+    console.error('[admin images upload proxy] error', err);
+    return res.status(500).json({ ok: false, error: 'upload_proxy_error' });
+  }
+});
+
+app.post('/api/admin/images/direct-upload', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const url = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v2/direct_upload`;
+    const r = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${API_TOKEN}` } });
+    const data = await r.json();
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, result: data.result });
+  } catch (err) {
+    console.error('[admin images direct-upload] error', err);
+    return res.status(500).json({ ok: false, error: 'direct_upload_error' });
+  }
+});
+
+app.get('/api/admin/images/list', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const page = Math.max(1, parseInt(String((req.query || {}).page || '1'), 10) || 1);
+    const perPage = Math.min(100, Math.max(1, parseInt(String((req.query || {}).per_page || '24'), 10) || 24));
+    const url = new URL(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v1`);
+    url.searchParams.set('page', String(page));
+    url.searchParams.set('per_page', String(perPage));
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${API_TOKEN}` } });
+    const data = await r.json();
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, page, per_page: perPage, total: data?.result?.total_count || 0, images: data?.result?.images || [] });
+  } catch (err) {
+    console.error('[admin images list] error', err);
+    return res.status(500).json({ ok: false, error: 'list_error' });
+  }
+});
+
+app.delete('/api/admin/images/:id', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v1/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${API_TOKEN}` } });
+    const data = await r.json();
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[admin images delete] error', err);
+    return res.status(500).json({ ok: false, error: 'delete_error' });
+  }
+});
+
+app.patch('/api/admin/images/:id', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = (process.env.CF_IMAGES_ADMIN_TOKEN || process.env.BACKEND_TOKEN || process.env.GALLERY_UPLOAD_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    if (!ADMIN_TOKEN || AUTH !== `Bearer ${ADMIN_TOKEN}`) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const ACCOUNT_ID = String(process.env.CLOUDFLARE_ACCOUNT_ID || '').trim();
+    const API_TOKEN = String(process.env.CLOUDFLARE_IMAGES_TOKEN || '').trim();
+    if (!ACCOUNT_ID || !API_TOKEN) return res.status(500).json({ ok: false, error: 'missing_cloudflare_env' });
+
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+    const body = req.body || {};
+    const metadata = {};
+    if (typeof body.name === 'string' && body.name.trim()) Object.assign(metadata, { name: body.name.trim() });
+    const payload = {};
+    if (Object.keys(metadata).length) Object.assign(payload, { metadata });
+    if (typeof body.requireSignedURLs === 'boolean') Object.assign(payload, { requireSignedURLs: !!body.requireSignedURLs });
+    const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/images/v1/${id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${API_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (!data?.success) return res.status(502).json({ ok: false, error: 'cloudflare_error', details: data });
+    return res.json({ ok: true, result: data.result });
+  } catch (err) {
+    console.error('[admin images patch] error', err);
+    return res.status(500).json({ ok: false, error: 'patch_error' });
+  }
 });
 
 // Galerie publique d'images (statique + listing JSON) — placée AVANT l'auth middleware

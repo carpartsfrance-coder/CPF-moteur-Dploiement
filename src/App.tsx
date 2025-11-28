@@ -11,12 +11,12 @@ import QuoteRequestPage from './pages/QuoteRequestPage';
 import RequireAdmin from './components/admin/RequireAdmin';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminQuotes from './pages/admin/AdminQuotes';
-import AdminGallery from './pages/admin/AdminGallery';
 import AdminEnginePages from './pages/admin/AdminEnginePages';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminBlogPosts from './pages/admin/AdminBlogPosts';
 import AdminRedirects from './pages/admin/AdminRedirects';
 import AdminSeoChecks from './pages/admin/AdminSeoChecks';
+import AdminImages from './pages/admin/AdminImages';
 import EngineCodePage from './pages/EngineCodePage';
 import EnginesListPage from './pages/EnginesListPage';
 import EnginesBrandPage from './pages/EnginesBrandPage';
@@ -108,7 +108,7 @@ function App() {
           <Route path="/admin" element={<Navigate to="/admin/devis" replace />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/devis" element={<RequireAdmin><AdminQuotes /></RequireAdmin>} />
-          <Route path="/admin/gallery" element={<RequireAdmin><AdminGallery /></RequireAdmin>} />
+          <Route path="/admin/images" element={<RequireAdmin><AdminImages /></RequireAdmin>} />
           <Route path="/admin/engine-pages" element={<RequireAdmin><AdminEnginePages /></RequireAdmin>} />
           <Route path="/admin/redirects" element={<RequireAdmin><AdminRedirects /></RequireAdmin>} />
           <Route path="/admin/seo-checks" element={<RequireAdmin><AdminSeoChecks /></RequireAdmin>} />
