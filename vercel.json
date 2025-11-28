@@ -1,7 +1,6 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/api/public/gallery-file/(?<id>[^/]+)$", "dest": "/api/public/gallery-file?id=$id" },
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ]
