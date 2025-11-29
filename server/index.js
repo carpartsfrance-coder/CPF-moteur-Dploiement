@@ -1256,34 +1256,53 @@ app.post('/api/public/quote-request', async (req, res) => {
 
     if (email) {
       const userSubject = `Nous avons bien reçu votre demande de devis (${ref})`;
-      const userPlain = [
-        'Merci, nous avons bien reçu votre demande.',
-        `Réf: ${ref}`,
-        `Identifiant véhicule: ${vehicleId || '—'}`,
-        `Message: ${message || '—'}`,
-        'Notre équipe revient vers vous sous 24h ouvrées.'
-      ].join('\n');
       const origin = getWebsiteOrigin();
       const socialLogos = [
         { src: `${origin}/images/partners/logo-porsche.webp`, alt: 'Centre Porsche Toulon' },
         { src: `${origin}/images/partners/mougins-autosport.webp`, alt: 'Mougins Autosport' },
         { src: `${origin}/images/partners/sun-motors.webp`, alt: 'Sun Motors' },
       ];
+      const userMessage = [
+        'Merci pour votre confiance, votre dossier passe en priorité auprès de notre équipe.',
+        `Réf: ${ref}`,
+        `Identifiant véhicule: ${vehicleId || '—'}`,
+        `Message transmis: ${message || '—'}`,
+        'Nous revenons vers vous sous 24h ouvrées avec un devis détaillé (garantie 12 mois + rapport de tests).'
+      ].join('\n');
+      const userPlain = `${userMessage}\n\nÉtapes suivantes :\n1) Validation compatibilité (VIN / plaque)\n2) Rapport de tests envoyé pour validation finale\n3) Organisation de l’expédition assurée (72h à 14 jours)`;
+      const nextSteps = [
+        'Validation de la compatibilité à partir de votre plaque / VIN et disponibilité stock.',
+        'Envoi du rapport de tests (compression, endoscopie, capteurs) pour validation finale.',
+        'Organisation de l’expédition assurée (72h à 14 jours) avec suivi WhatsApp et prise de rendez-vous.'
+      ];
+      const replyNotice = 'Vous pouvez répondre directement à cet e-mail ou utiliser les coordonnées ci-dessous.';
+      const replyOptions = {
+        phone: '04 65 84 54 88',
+        whatsapp: 'https://wa.me/33756875025'
+      };
+      const testsPageUrl = `${process.env.COMPANY_WEBSITE_URL || origin}/tests-moteurs`;
+      const companyInfo = {
+        instagramUrl: 'https://www.instagram.com/carpartsfrance/'
+      };
+      const details = {
+        reference: ref,
+        delivery: 'Devis détaillé sous 24h ouvrées, expédition 72h à 14 jours (assurance casse/perte)'
+      };
       const userHtml = buildReplyEmailHtml({
         subject: userSubject,
         toName: name || '',
-        message: [
-          'Merci, nous avons bien reçu votre demande.',
-          `Réf: ${ref}`,
-          `Identifiant véhicule: ${vehicleId || '—'}`,
-          `Message: ${message || '—'}`,
-          'Notre équipe revient vers vous sous 24h ouvrées.'
-        ].join('\n'),
+        message: userMessage,
         companyName: 'Car Parts France',
         websiteUrl: process.env.COMPANY_WEBSITE_URL || '',
         supportEmail: fromEmail,
         logoUrl: `${origin}/images/logo.png`,
         socialProof: { logos: socialLogos },
+        nextSteps,
+        testsPageUrl,
+        details,
+        replyNotice,
+        replyOptions,
+        companyInfo,
       });
       const userParams = new EmailParams()
         .setFrom(new Sender(fromEmail, fromName))

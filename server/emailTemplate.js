@@ -28,11 +28,17 @@ export const buildReplyEmailHtml = ({
   replyNotice = '',
   replyOptions = undefined,
   socialProof = undefined,
+  nextSteps = undefined,
+  testsPageUrl = '',
 } = {}) => {
   const rawMessage = String(message || '');
   const safeMessage = escapeHtml(rawMessage).replace(/\n/g, '<br />');
   const safeToName = escapeHtml(toName || '');
   const safeCompany = escapeHtml(companyName);
+  const baseWebsite = String(websiteUrl || '').trim();
+  const testUrl = String(testsPageUrl || '').trim();
+  const buttonUrl = testUrl || baseWebsite;
+  const buttonLabel = testUrl ? 'Voir les tests moteurs' : 'Visiter notre site';
 
   // Couleurs finales (compatibilité: si primaryColor non fourni, on tombe sur brandColor)
   const PRIMARY = primaryColor || brandColor || '#e63946';
@@ -97,6 +103,10 @@ export const buildReplyEmailHtml = ({
     .cta:link, .cta:visited { color: #ffffff !important; text-decoration: none !important; }
     .divider { height: 1px; background: ${GREY_200}; margin: 16px 0; }
     .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; background: ${TINT_PRIMARY}; border: 1px solid ${PRIMARY_LIGHT}; color: ${SECONDARY}; font-size: 12px; font-weight: 700; letter-spacing: .2px; margin: 6px 0 12px; }
+    .next-steps { margin: 16px 0; border: 1px solid ${GREY_200}; border-radius: 12px; padding: 14px 18px; background: ${TINT_SECONDARY}; }
+    .next-steps__title { font-weight: 700; color: ${SECONDARY}; margin-bottom: 8px; }
+    .next-steps__list { padding-left: 18px; margin: 0; color: ${TEXT}; }
+    .next-steps__list li { margin-bottom: 6px; line-height: 1.5; }
     /* Details (table pour compatibilité clients mail) */
     .details { margin-top: 16px; border: 1px solid ${GREY_200}; border-radius: 12px; overflow: hidden; }
     .details__head { background: ${TINT_PRIMARY}; padding: 12px 16px; font-weight: 700; color: ${SECONDARY}; border-bottom: 1px solid ${GREY_200}; border-left: 4px solid ${PRIMARY}; }
@@ -147,6 +157,13 @@ export const buildReplyEmailHtml = ({
             <div class="badge">Devis personnalisé</div>
             ${!startsWithGreeting && safeToName ? `<p>Bonjour ${safeToName},</p>` : ''}
             <div class="card">${safeMessage}</div>
+            ${Array.isArray(nextSteps) && nextSteps.length ? `
+            <div class="next-steps">
+              <div class="next-steps__title">Ce qui va se passer ensuite</div>
+              <ol class="next-steps__list">
+                ${nextSteps.map((step) => `<li>${escapeHtml(String(step))}</li>`).join('')}
+              </ol>
+            </div>` : ''}
             ${socialProof && Array.isArray(socialProof.logos) && socialProof.logos.length ? `
             <div style="margin-top:14px;border:1px solid ${GREY_200};border-radius:12px;padding:12px 14px;">
               <div style="font-weight:700;color:${SECONDARY};margin-bottom:8px;">Ils nous font confiance</div>
@@ -212,7 +229,7 @@ export const buildReplyEmailHtml = ({
               ` : ''}
             </div>` : ''}
             
-            ${websiteUrl ? `<div style="margin-top:10px;"><a class="cta" href="${websiteUrl}" target="_blank" rel="noopener" style="color:#ffffff;text-decoration:none;">Visiter notre site</a></div>` : ''}
+            ${buttonUrl ? `<div style="margin-top:10px;"><a class="cta" href="${escapeHtml(buttonUrl)}" target="_blank" rel="noopener" style="color:#ffffff;text-decoration:none;">${escapeHtml(buttonLabel)}</a></div>` : ''}
             <p style="margin-top:18px;">Bien cordialement,<br>${safeCompany}</p>
             ${companyInfo ? `
             <div class="signature">
