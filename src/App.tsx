@@ -27,6 +27,7 @@ import TestsMoteursPage from './pages/TestsMoteursPage';
 
 function App() {
   const location = useLocation();
+  const backendBase = (process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
   useEffect(() => {
     const setMeta = (title: string, description: string) => {
@@ -94,6 +95,8 @@ function App() {
       <Header />
       <Box component="main" sx={{ flexGrow: 1 }}>
         <Routes>
+          {/* Redirection front -> backend pour toutes les pages blog SSR */}
+          <Route path="/blog/*" element={<Navigate to={`${backendBase}${location.pathname}${location.search}`} replace />} />
           <Route path="/" element={<HomePage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/a-propos" element={<AboutPage />} />

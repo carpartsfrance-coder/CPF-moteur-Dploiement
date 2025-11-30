@@ -1,0 +1,41 @@
+<footer class="site-footer">
+  <div class="inner footer-grid">
+    <div class="footer-col">
+      <div class="brand-line">
+        <span class="logo"></span>
+        <strong>Car Parts France</strong>
+      </div>
+      <p class="footer-desc">Moteurs testés & garantis. Devis sous 24h. Livraison partout en France.</p>
+      <ul class="footer-contact" aria-label="Coordonnées">
+        <li>📞 <a href="tel:0465845488">04 65 84 54 88</a></li>
+        <li>💬 <a href="https://wa.me/330756875025" target="_blank" rel="noopener">WhatsApp</a></li>
+        <li>✉️ <a href="mailto:contact@cpfmoteur.fr">contact@cpfmoteur.fr</a></li>
+      </ul>
+    </div>
+    <nav class="footer-col" aria-labelledby="footer-links">
+      <h3 id="footer-links" class="footer-title">Liens</h3>
+      <ul class="footer-list">
+        <li><a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a></li>
+        <li><a href="<%= (origin || '') + '/blog' %>">Blog</a></li>
+        <li><a href="<%= (origin || '') + '/tests-moteurs' %>">Tests moteurs</a></li>
+        <li><a href="<%= (origin || '') + '/a-propos' %>">À propos</a></li>
+        <li><a href="<%= (origin || '') + '/contact' %>">Contact</a></li>
+        <li><a href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a></li>
+      </ul>
+    </nav>
+    <nav class="footer-col" aria-labelledby="footer-legal">
+      <h3 id="footer-legal" class="footer-title">Légal</h3>
+      <ul class="footer-list">
+        <li><a href="<%= (origin || '') + '/mentions-legales' %>">Mentions légales</a></li>
+        <li><a href="<%= (origin || '') + '/politique-de-confidentialite' %>">Politique de confidentialité</a></li>
+        <li><a href="<%= (origin || '') + '/cgv' %>">CGV</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="footer-bottom">
+    <div class="inner">
+      <div>© <%= new Date().getFullYear() %> Car Parts France — Tous droits réservés.</div>
+      <div><a href="<%= (origin || '') + '/sitemap.xml' %>">Sitemap</a></div>
+    </div>
+  </div>
+</footer>

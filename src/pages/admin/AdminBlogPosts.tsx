@@ -243,9 +243,6 @@ const AdminBlogPosts: React.FC = () => {
     const wordCount = text ? text.split(' ').filter(Boolean).length : 0;
     const tagsCount = Array.isArray(current.tags) ? current.tags.filter(Boolean).length : 0;
     const qualityBad = (wordCount < 600) || (tagsCount < 1);
-    if (current.status === 'published' && qualityBad && !current.noindex) {
-      current.noindex = true;
-    }
     const body: any = { ...current };
     delete body.id;
     if (typeof body.tags === 'string') {
@@ -633,7 +630,7 @@ const AdminBlogPosts: React.FC = () => {
               return ok ? (
                 <Alert severity="success">Qualité OK — {wc} mots, {tc} tag(s).</Alert>
               ) : (
-                <Alert severity="warning">Qualité faible — {wc} mots, {tc} tag(s). L’article sera marqué "noindex" s’il est publié.</Alert>
+                <Alert severity="warning">Qualité faible — {wc} mots, {tc} tag(s).</Alert>
               );
             })()}
 

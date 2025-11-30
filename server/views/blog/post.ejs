@@ -8,6 +8,10 @@
   <% if (canonical) { %><link rel="canonical" href="<%= canonical %>"><% } %>
   <% if (typeof noindex !== 'undefined' && noindex) { %><meta name="robots" content="noindex,nofollow"><% } %>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
   <% if (ogImage) { %>
     <meta property="og:image" content="<%= ogImage %>">
     <meta name="twitter:image" content="<%= ogImage %>">
@@ -21,7 +25,7 @@
   <% if (description) { %><meta name="twitter:description" content="<%= description %>"><% } %>
   <% if (gsc) { %><meta name="google-site-verification" content="<%= gsc %>"><% } %>
 
-  <link rel="stylesheet" href="/assets/blog.css">
+  <link rel="stylesheet" href="<%= (typeof assetsOrigin !== 'undefined' && assetsOrigin) ? (assetsOrigin + '/assets/blog.css') : '/assets/blog.css' %>">
 
   <script type="application/ld+json">
   <%- JSON.stringify({
@@ -65,8 +69,13 @@
       --color-border-light:#e5e7eb;
       --color-text-main:#0f172a;
       --color-text-muted:#6b7280;
+      --font-display:'DM Sans', 'Inter', 'Segoe UI', system-ui, -apple-system;
+      --font-body:'Inter', 'Segoe UI', system-ui, -apple-system;
+      --color-sage:#e0f2f1;
+      --color-dark:#020617;
+      --color-card-glass:rgba(255,255,255,0.75);
     }
-    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;margin:0;color:var(--color-text-main);background:var(--color-background);font-size:16px;line-height:1.6;font-weight:400}
+    body{font-family:var(--font-body,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif);margin:0;color:var(--color-text-main);background:var(--color-background);font-size:16px;line-height:1.6;font-weight:400;min-height:100vh}
     .container{max-width:1500px;margin:0 auto;padding:24px}
     /* Header & Footer (aligné à la home) */
     .site-header{position:sticky;top:0;z-index:50;background:#ffffffcc;backdrop-filter:saturate(140%) blur(6px);border-bottom:1px solid #e2e8f0}
@@ -131,10 +140,12 @@
     .title{font-size:30px;line-height:1.15;margin:0 0 10px;font-weight:800;color:#0f172a}
     .meta{color:#475569;font-size:12px;margin-bottom:16px}
     .hero-img{width:100%;height:auto;border-radius:12px;border:1px solid #e2e8f0;margin:10px 0}
-    .layout{display:grid;grid-template-columns:1fr;gap:24px;margin-top:8px;margin-bottom:48px}
-    @media(min-width:1024px){.layout{grid-template-columns:0.75fr 0.25fr;column-gap:32px}}
-    .content{background:var(--color-card-bg);border:1px solid var(--color-border-light);border-radius:14px;box-shadow:0 8px 28px rgba(15,23,42,0.06);padding:16px}
-    .article-inner{max-width:1120px}
+    .layout{display:grid;grid-template-columns:1fr;gap:28px;margin-top:8px;margin-bottom:48px}
+    .layout.layout--wide{max-width:1300px;margin:0 auto}
+    @media(min-width:1200px){.layout{grid-template-columns:minmax(0,0.7fr) minmax(280px,0.3fr);column-gap:36px}}
+    .content{background:var(--color-card-bg);border:1px solid var(--color-border-light);border-radius:18px;box-shadow:0 20px 55px rgba(15,23,42,0.08);padding:32px}
+    .article-inner{max-width:960px;margin:0 auto}
+    .article-slab{position:relative;overflow:hidden}
     .content p{font-size:16px;line-height:1.7;margin:0 0 14px}
     @media(max-width:1023px){.content p{font-size:15px}}
     .content h2{font-size:24px;line-height:1.3;font-weight:600;margin:32px 0 12px}
@@ -146,10 +157,20 @@
     .content li{margin:4px 0}
     .related{margin-top:18px}
     .related a{display:inline-block;margin:6px 8px 0 0;padding:8px 12px;border:1px solid #e2e8f0;border-radius:10px;color:#0f172a;text-decoration:none;background:#fff}
-    .toc{position:sticky;top:90px;background:var(--color-card-bg);border:1px solid var(--color-border-light);border-radius:14px;box-shadow:0 8px 28px rgba(15,23,42,0.06);padding:16px}
-    .toc h3{margin:0 0 8px;font-size:16px;font-weight:600}
+    .sidebar-sticky{position:relative}
+    @media(min-width:1024px){.sidebar-sticky{position:sticky;top:90px;height:fit-content}}
+    .toc-card{background:var(--color-card-glass);backdrop-filter:blur(24px);border:1px solid rgba(226,232,240,0.6);border-radius:20px;box-shadow:0 18px 45px rgba(15,23,42,0.12);padding:20px;margin-bottom:18px}
+    .toc-card h3{margin:0 0 8px;font-size:15px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#475569;display:flex;align-items:center;justify-content:space-between}
+    .toc{margin:0;padding:0}
     .toc ul{margin:0;padding-left:18px}
+    .toc a{color:#475569;text-decoration:none;display:block;padding:6px 0;font-size:14px}
+    .toc a.active{font-weight:700;color:#0ea5e9}
     .sidebar-card{background:var(--color-card-bg);border:1px solid var(--color-border-light);border-radius:14px;padding:16px;box-shadow:0 8px 28px rgba(15,23,42,0.06)}
+    .sidebar-cta-card{background:linear-gradient(160deg,#0f172a,#1e293b);color:#fff;border-radius:22px;padding:22px;box-shadow:0 25px 45px rgba(2,6,23,0.35)}
+    .sidebar-cta-card .line{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:14px}
+    .sidebar-cta-card a{color:#fff;font-weight:700;text-decoration:none}
+    .sidebar-cta-card .btn-primary{width:auto;min-width:0;display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;font-size:13px;line-height:1;border-radius:999px}
+    @media(max-width:1023px){.sidebar-cta-card .btn-primary{width:100%}}
     .cta-box{margin-top:16px;background:linear-gradient(45deg,#e63946 0%,#ff6b6b 100%);color:#fff;border-radius:14px;padding:14px}
     .cta-btn{display:inline-block;margin-top:8px;background:linear-gradient(90deg,var(--color-primary),var(--color-primary-2));color:#fff;text-decoration:none;padding:10px 14px;border-radius:999px;font-weight:700}
     /* Rendu visuel PRO pour le contenu généré */
@@ -168,15 +189,20 @@
     .breadcrumb{display:flex;align-items:center;gap:6px;color:#475569;font-size:12px;margin:4px 0 10px}
     .breadcrumb a{color:#0f172a;text-decoration:none}
     .breadcrumb .sep{opacity:0.5}
-    .share{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-    .share a,.share button{border:1px solid #e2e8f0;background:#fff;padding:6px 10px;border-radius:999px;font-size:12px;color:#0f172a;text-decoration:none;cursor:pointer}
-    .share a:hover,.share button:hover{background:#f8fafc}
-    .toc a.active{font-weight:700;color:#0ea5e9}
-    .progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#0ea5e9,#22c55e);width:0;z-index:9999}
+    .share{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+    .share-pill{border:1px solid #e2e8f0;background:#fff;padding:8px 14px;border-radius:999px;font-size:13px;color:#0f172a;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s,box-shadow .15s}
+    .share-pill svg{width:16px;height:16px}
+    .share-pill:hover{background:#f8fafc;box-shadow:0 4px 10px rgba(15,23,42,0.08)}
+    .progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#0ea5e9,#22c55e);width:0;z-index:9999;transition:width .1s linear}
     /* CTA mobile collante */
-    .sticky-cta{position:fixed;left:12px;right:12px;bottom:12px;background:#0ea5e9;color:#fff;border-radius:999px;padding:12px 16px;text-align:center;font-weight:800;box-shadow:0 12px 30px rgba(2,6,23,.25)}
+    .sticky-cta{position:fixed;left:12px;right:12px;bottom:12px;background:#0ea5e9;color:#fff;border-radius:999px;padding:12px 16px;text-align:center;font-weight:800;box-shadow:0 12px 30px rgba(2,6,23,.25);z-index:9997}
     .sticky-cta a{color:#fff;text-decoration:none}
-    @media(min-width:1024px){.sticky-cta{display:none}}
+    .cta-sticky-desktop{display:none}
+    @media(min-width:1024px){
+      .sticky-cta{display:none}
+      .cta-sticky-desktop{position:fixed;right:32px;bottom:32px;background:linear-gradient(120deg,#e63946,#ff6b6b);color:#fff;padding:18px 26px;border-radius:999px;font-weight:800;text-decoration:none;box-shadow:0 20px 40px rgba(230,57,70,0.35);display:inline-flex;align-items:center;gap:10px;z-index:9997}
+      .cta-sticky-desktop svg{width:18px;height:18px}
+    }
     /* Badges d'info et tags cliquables */
     .badges{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 8px}
     .badge{display:inline-block;background:#e2e8f0;color:#0f172a;border-radius:999px;padding:4px 10px;font-size:12px}
@@ -188,21 +214,30 @@
     .table-wrap table{margin:0}
     /* Cartes articles liés */
     .related-grid{display:grid;gap:16px;grid-template-columns:1fr}
-    @media(min-width:700px){.related-grid{grid-template-columns:1fr}}
-    @media(min-width:1024px){.related-grid{grid-template-columns:1fr}}
-    .card{border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:row}
-    .card img{width:120px;height:100%;max-height:120px;object-fit:cover;border:0;border-right:1px solid #e2e8f0}
-    .card .card-body{padding:12px}
-    .card .card-title{font-weight:800;color:#0f172a;margin:0 0 6px;font-size:16px;line-height:1.3}
+    .related-slider{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,300px);gap:16px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+    .card{border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;background:#fff;display:flex;flex-direction:column;min-height:100%;scroll-snap-align:start;box-shadow:0 16px 38px rgba(15,23,42,0.12)}
+    .card img{width:100%;height:180px;object-fit:cover;border:0}
+    .card .card-body{padding:16px;display:flex;flex-direction:column;gap:8px}
+    .card .card-title{font-weight:800;color:#0f172a;margin:0;font-size:17px;line-height:1.35}
     .card .card-meta{font-size:12px;color:#64748b;display:flex;gap:8px;flex-wrap:wrap}
     /* Navigation précédent/suivant */
-    .prevnext{display:flex;justify-content:space-between;gap:12px;margin-top:18px}
+    .prevnext{display:flex;justify-content:space-between;gap:12px;margin-top:18px;flex-wrap:wrap}
     .prevnext a{flex:1;display:block;border:1px solid #e2e8f0;border-radius:10px;padding:10px;text-decoration:none;color:#0f172a;background:#fff}
     .prevnext a small{display:block;color:#64748b}
     /* Auteur / mise à jour */
     .author-box{margin-top:16px;border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#fff}
     .author-box .name{font-weight:800}
     .author-box .date{font-size:12px;color:#64748b}
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:18px}
+    .metric-card{background:#fff;border:1px solid rgba(226,232,240,0.8);border-radius:16px;padding:18px;box-shadow:0 14px 30px rgba(15,23,42,0.08)}
+    .metric-card span{display:block;font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+    .metric-card strong{font-size:22px;color:#0f172a}
+    .testimonials{margin:28px 0;padding:28px;border:1px solid rgba(226,232,240,0.8);border-radius:22px;background:linear-gradient(145deg,#fff,#f8fafc);box-shadow:0 18px 45px rgba(15,23,42,0.08)}
+    .testimonials h2{margin-top:0}
+    .testimonials-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    .testimonial-card{background:#fff;border-radius:18px;padding:18px;border:1px solid #e2e8f0;box-shadow:0 12px 24px rgba(15,23,42,0.08)}
+    .testimonial-card .quote{font-style:italic;color:#334155;margin-bottom:10px}
+    .testimonial-card .author{font-weight:700;color:#0f172a}
     /* Lightbox */
     .lightbox{position:fixed;inset:0;background:rgba(2,6,23,.8);display:none;align-items:center;justify-content:center;padding:16px;z-index:9998}
     .lightbox.open{display:flex}
@@ -220,6 +255,22 @@
     @media(min-width:900px){.site-footer .inner{grid-template-columns:2fr 1fr 1fr}}
     .site-footer a{color:#e2e8f0;text-decoration:none}
     .site-footer a:hover{text-decoration:underline}
+    /* Footer pro */
+    .footer-grid{grid-template-columns:1fr}
+    @media(min-width:900px){.footer-grid{grid-template-columns:2fr 1fr 1fr}}
+    .brand-line{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .site-footer .logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#e63946,#ff6b6b)}
+    .footer-desc{opacity:.9;font-size:14px;margin:0}
+    .footer-contact{list-style:none;padding:0;margin:10px 0 0}
+    .footer-contact li{margin:6px 0;font-size:14px}
+    .footer-title{margin:0 0 8px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#cbd5e1}
+    .footer-list{list-style:none;padding:0;margin:0}
+    .footer-list li{margin:6px 0}
+    .footer-list a{color:#e2e8f0;text-decoration:none}
+    .footer-list a:hover{color:#ffffff;text-decoration:underline}
+    .footer-bottom{border-top:1px solid rgba(255,255,255,0.15);margin-top:12px}
+    .footer-bottom .inner{padding-top:12px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+    @media(max-width:600px){.footer-bottom .inner{flex-direction:column;align-items:flex-start;gap:6px}}
   </style>
 </head>
 <body>
@@ -273,6 +324,20 @@
               <span><%= _brand %> <%= _code %></span>
             <% } %>
           </div>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span>Compatibilité</span>
+              <strong>Vérifiée via VIN</strong>
+            </div>
+            <div class="metric-card">
+              <span>Garantie</span>
+              <strong>12 mois</strong>
+            </div>
+            <div class="metric-card">
+              <span>Expédition</span>
+              <strong>4-5 jours</strong>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -298,90 +363,119 @@
     <% if (ogImage) { %>
       <img class="hero-img" src="<%= ogImage %>" alt="<%= post?.title || '' %>">
     <% } %>
+    <div class="share" style="margin:8px 0 16px">
+      <a class="share-pill" href="#" data-share="twitter" id="share-twitter-top" aria-label="Partager sur Twitter">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22 5.9c-.7.3-1.4.5-2.2.6a3.6 3.6 0 0 0 1.6-2 7 7 0 0 1-2.3.9A3.5 3.5 0 0 0 12.4 8c0 .3 0 .5.1.8A10 10 0 0 1 3 5.2a3.5 3.5 0 0 0 1.1 4.7c-.6 0-1.1-.2-1.6-.4v.1c0 1.7 1.2 3.2 2.8 3.5-.3.1-.6.1-.9.1-.3 0-.4 0-.7-.1a3.5 3.5 0 0 0 3.3 2.4 7 7 0 0 1-4.3 1.5H2a9.8 9.8 0 0 0 5.5 1.6c6.6 0 10.3-5.5 10.3-10.3v-.5c.7-.4 1.4-1 2-1.6Z"/></svg>
+        Twitter
+      </a>
+      <a class="share-pill" href="#" data-share="linkedin" id="share-linkedin-top" aria-label="Partager sur LinkedIn">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.9 6.5c0 1-.8 1.8-1.8 1.8S3.3 7.6 3.3 6.5c0-1 .8-1.8 1.8-1.8s1.8.8 1.8 1.8ZM4 9h3.2v9.7H4zm5.4 0h3v1.3h.1c.4-.8 1.5-1.6 3-1.6 3.2 0 3.8 2.1 3.8 4.8v5.2H15v-4.6c0-1.1 0-2.4-1.5-2.4s-1.8 1.2-1.8 2.3v4.7H9.4Z"/></svg>
+        LinkedIn
+      </a>
+      <button class="share-pill" id="share-copy-top" type="button" aria-label="Copier le lien">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16 1H5c-1.1 0-2 .9-2 2v13h2V3h11V1Zm3 4H9c-1.1 0-2 .9-2 2v15c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2Zm0 17H9V7h10v15Z"/></svg>
+        Copier
+      </button>
+    </div>
 
-    <div class="layout">
-      <div class="content"><div class="article-inner" id="article-content"><%- post?.contentHtml || '' %></div>
-      <aside class="toc">
-        <h3>Sommaire <button class="toc-toggle" id="toc-toggle" aria-label="Basculer le sommaire">Afficher/Masquer</button></h3>
-        <ul id="toc-list"></ul>
-        <div class="cta-box">
-          <div style="font-weight:700">Besoin d’un devis moteur ?</div>
-          <div style="font-size:13px;opacity:0.9">Réponse sous 24h, compatibilité confirmée.</div>
-          <a class="cta-btn" href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a>
+    <div class="layout layout--wide">
+      <article class="content article-slab">
+        <div class="article-inner" id="article-content"><%- post?.contentHtml || '' %></div>
+
+        <section class="testimonials">
+          <h2>Ils recommandent Car Parts France</h2>
+          <div class="testimonials-grid">
+            <article class="testimonial-card">
+              <p class="quote">“Diagnostic clair, moteur livré prêt à monter. Equipe très pro.”</p>
+              <div class="author">Raphaël · Audi A6</div>
+            </article>
+            <article class="testimonial-card">
+              <p class="quote">“Réponse en quelques heures et compatibilité vérifiée via VIN.”</p>
+              <div class="author">Isabelle · BMW Série 3</div>
+            </article>
+            <article class="testimonial-card">
+              <p class="quote">“Rapport de tests complet, parfait pour rassurer mon garagiste.”</p>
+              <div class="author">Julien · Porsche Cayenne</div>
+            </article>
+          </div>
+        </section>
+
+        <% if (Array.isArray(related) && related.length) { %>
+          <div class="related">
+            <strong>Articles liés</strong>
+            <div class="related-slider">
+              <% related.forEach(function(r){ %>
+                <a class="card" href="/blog/<%= r.slug %>">
+                  <% if (r.image) { %><img src="<%= r.image %>" alt="<%= r.title %>" loading="lazy" decoding="async" /><% } %>
+                  <div class="card-body">
+                    <div class="card-title"><%= r.title %></div>
+                    <div class="card-meta">
+                      <% if (r.publishedAt) { %><span><%= new Date(r.publishedAt).toLocaleDateString('fr-FR') %></span><% } %>
+                      <% if (Array.isArray(r.tags) && r.tags.length) { %>
+                        <% r.tags.slice(0,2).forEach(function(t){ %><span>#<%= t %></span><% }) %>
+                      <% } %>
+                    </div>
+                  </div>
+                </a>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
+
+        <div class="share" style="margin:24px 0 4px">
+          <a class="share-pill" href="#" data-share="twitter" id="share-twitter-bottom">Twitter</a>
+          <a class="share-pill" href="#" data-share="linkedin" id="share-linkedin-bottom">LinkedIn</a>
+          <button class="share-pill" id="share-wa-bottom" type="button">WhatsApp</button>
+          <button class="share-pill" id="share-copy-bottom" type="button">Copier</button>
+        </div>
+
+        <section class="blog-cta">
+          <h2>Besoin d’un moteur testé et garanti ?</h2>
+          <p>Obtenez un devis sous 24h. Indiquez votre immatriculation ou votre VIN pour vérifier la compatibilité.</p>
+          <a class="blog-btn-primary" href="https://www.cpfmoteur.fr/demande-devis">Voir nos solutions</a>
+        </section>
+
+        <% if (prev || next) { %>
+          <nav class="prevnext">
+            <% if (prev) { %>
+              <a href="/blog/<%= prev.slug %>"><small>← Article précédent</small><div><%= prev.title %></div></a>
+            <% } %>
+            <% if (next) { %>
+              <a style="text-align:right" href="/blog/<%= next.slug %>"><small>Article suivant →</small><div><%= next.title %></div></a>
+            <% } %>
+          </nav>
+        <% } %>
+
+        <div class="author-box">
+          <div class="name">Car Parts France</div>
+          <div class="date">Dernière mise à jour: <%= new Date(post?.updatedAt || post?.publishedAt || Date.now()).toLocaleDateString('fr-FR') %></div>
+        </div>
+      </article>
+
+      <aside class="sidebar-sticky">
+        <div class="toc-card">
+          <h3>Sommaire <button class="toc-toggle" id="toc-toggle" aria-label="Basculer le sommaire">Afficher/Masquer</button></h3>
+          <div class="toc">
+            <ul id="toc-list"></ul>
+          </div>
+        </div>
+        <div class="sidebar-cta-card">
+          <div style="font-size:14px;text-transform:uppercase;letter-spacing:.08em;opacity:.8">Assistance dédiée</div>
+          <h3 style="margin:6px 0 4px;font-size:22px">Parlons de votre moteur</h3>
+          <p style="opacity:.85;font-size:14px">Compatibilité confirmée via VIN, rapport de tests et logistique partout en France.</p>
+          <div class="line">📞 <a href="tel:0465845488">04 65 84 54 88</a></div>
+          <div class="line">💬 <a href="https://wa.me/330756875025" target="_blank" rel="noopener">WhatsApp direct</a></div>
+          <a class="btn-primary" style="margin-top:12px" href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a>
         </div>
       </aside>
     </div>
 
-    <% if (Array.isArray(related) && related.length) { %>
-      <div class="related">
-        <strong>Articles liés</strong>
-        <div class="related-grid">
-          <% related.forEach(function(r){ %>
-            <a class="card" href="/blog/<%= r.slug %>">
-              <% if (r.image) { %><img src="<%= r.image %>" alt="<%= r.title %>" loading="lazy" decoding="async" /><% } %>
-              <div class="card-body">
-                <div class="card-title"><%= r.title %></div>
-                <div class="card-meta">
-                  <% if (r.publishedAt) { %><span><%= new Date(r.publishedAt).toLocaleDateString('fr-FR') %></span><% } %>
-                  <% if (Array.isArray(r.tags) && r.tags.length) { %>
-                    <% r.tags.slice(0,2).forEach(function(t){ %><span>#<%= t %></span><% }) %>
-                  <% } %>
-                </div>
-              </div>
-            </a>
-          <% }) %>
-        </div>
-      </div>
-    <% } %>
-    <div class="share" style="margin:12px 0 4px">
-      <a href="#" id="share-twitter-bottom">Partager Twitter</a>
-      <a href="#" id="share-fb-bottom">Partager Facebook</a>
-      <a href="#" id="share-wa-bottom">WhatsApp</a>
-      <button id="share-copy-bottom">Copier le lien</button>
-    </div>
-    <section class="blog-cta">
-      <h2>Besoin d’un moteur testé et garanti ?</h2>
-      <p>Obtenez un devis sous 24h. Indiquez votre immatriculation ou votre VIN pour vérifier la compatibilité.</p>
-      <a class="blog-btn-primary" href="https://www.cpfmoteur.fr/demande-devis">Voir nos solutions</a>
-    </section>
-    <% if (prev || next) { %>
-      <nav class="prevnext">
-        <% if (prev) { %>
-          <a href="/blog/<%= prev.slug %>"><small>← Article précédent</small><div><%= prev.title %></div></a>
-        <% } else { %><span></span><% } %>
-        <% if (next) { %>
-          <a style="text-align:right" href="/blog/<%= next.slug %>"><small>Article suivant →</small><div><%= next.title %></div></a>
-        <% } else { %><span></span><% } %>
-      </nav>
-    <% } %>
-    <div class="author-box">
-      <div class="name">Car Parts France</div>
-      <div class="date">Dernière mise à jour: <%= new Date(post?.updatedAt || post?.publishedAt || Date.now()).toLocaleDateString('fr-FR') %></div>
-    </div>
-  </div>
   <div class="sticky-cta"><a href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a></div>
-  <footer class="site-footer">
-    <div class="inner">
-      <div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span class="logo" style="width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,#e63946,#ff6b6b)"></span>
-          <strong>Car Parts France</strong>
-        </div>
-        <div style="opacity:0.9;font-size:14px">Moteurs testés & garantis. Devis sous 24h. Livraison partout en France.</div>
-      </div>
-      <div>
-        <strong>Liens</strong><br />
-        <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a><br />
-        <a href="<%= (origin || '') + '/blog' %>">Blog</a><br />
-        <a href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a>
-      </div>
-      <div>
-        <strong>Légal</strong><br />
-        <a href="#">Mentions légales</a><br />
-        <a href="#">Politique de confidentialité</a>
-      </div>
-    </div>
-  </footer>
+  <a href="https://www.cpfmoteur.fr/demande-devis" class="cta-sticky-desktop" aria-label="Demander un devis">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 15h-2v-2h2Zm0-4h-2V7h2Zm0-4h-2V3h2Z"/></svg>
+    Demander un devis
+  </a>
+  <%- include('../partials/footer', { origin }) %>
 </body>
 </html>
 
@@ -509,7 +603,7 @@
         // TOC repliable sur mobile
         const toc = document.querySelector('.toc');
         const toggle = document.getElementById('toc-toggle');
-        if (toggle && toc) toggle.addEventListener('click', ()=> toc.classList.toggle('collapsed'));
+        if (toggle && list) toggle.addEventListener('click', ()=> toc.classList.toggle('collapsed'));
       } catch {}
     }
     if (document.readyState === 'loading') {
@@ -519,22 +613,5 @@
     }
   })();
 </script>
-          <strong>Car Parts France</strong>
-        </div>
-        <div style="opacity:0.9;font-size:14px">Moteurs testés & garantis. Devis sous 24h. Livraison partout en France.</div>
-      </div>
-      <div>
-        <strong>Liens</strong><br />
-        <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a><br />
-        <a href="<%= (origin || '') + '/blog' %>">Blog</a><br />
-        <a href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a>
-      </div>
-      <div>
-        <strong>Légal</strong><br />
-        <a href="#">Mentions légales</a><br />
-        <a href="#">Politique de confidentialité</a>
-      </div>
-    </div>
-  </footer>
 </body>
 </html>

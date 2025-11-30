@@ -16,46 +16,165 @@
   <meta name="twitter:title" content="<%= title %>">
   <% if (description) { %><meta name="twitter:description" content="<%= description %>"><% } %>
   <% if (gsc) { %><meta name="google-site-verification" content="<%= gsc %>"><% } %>
-  <style>
-    body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0;color:#0f172a;background:#f8fafc}
-    .container{max-width:1040px;margin:0 auto;padding:24px}
-    .title{font-size:30px;line-height:1.15;margin:0 0 12px;font-weight:800;color:#0f172a}
-    .grid{display:grid;gap:16px;grid-template-columns:1fr}
-    @media(min-width:960px){.grid{grid-template-columns:repeat(2,1fr)}}
-    .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 8px 28px rgba(15,23,42,0.06);padding:16px}
-    .card h2{margin:0 0 6px;font-size:18px}
-    .meta{color:#475569;font-size:12px;margin-bottom:8px}
-    .link{display:inline-block;margin-top:8px;text-decoration:none;color:#0f172a;border:1px solid #e2e8f0;border-radius:10px;padding:8px 12px;background:#fff}
-    .thumb{width:100%;height:auto;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:8px}
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="<%= (typeof assetsOrigin !== 'undefined' && assetsOrigin) ? (assetsOrigin + '/assets/blog.css?v=' + Date.now()) : ('/assets/blog.css?v=' + Date.now()) %>">
 </head>
-<body>
-  <div class="container">
-    <h1 class="title"><%= title %></h1>
-    <% if (description) { %><p class="meta"><%= description %></p><% } %>
-    <div class="grid">
-      <% (items||[]).forEach(function(p){ %>
-        <div class="card">
-          <% if (p.image) { %>
-            <img loading="lazy" class="thumb" src="<%= p.image %>" alt="<%= p.title %>">
-          <% } %>
-          <h2><a href="/blog/<%= p.slug %>" style="text-decoration:none;color:#0f172a"><%= p.title %></a></h2>
-          <% if (p.publishedAt) { %><div class="meta">Publié le <%= new Date(p.publishedAt).toLocaleDateString('fr-FR') %></div><% } %>
-          <div><%= p.summary || '' %></div>
-          <a class="link" href="/blog/<%= p.slug %>">Lire l’article</a>
-        </div>
-      <% }) %>
+<body class="blog-page">
+  <header class="site-header">
+    <div class="inner">
+      <a class="brand" href="<%= (origin || '').replace(/\/$/, '/') %>">
+        <img src="<%= (origin || '').replace(/\/$/, '') %>/images/logo.png" alt="Car Parts France" style="height:50px; width:auto; border-radius:6px" />
+        <span>Car Parts France</span>
+      </a>
+      <nav class="site-nav">
+        <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a>
+        <a href="<%= (origin || '') + '/a-propos' %>">À propos</a>
+        <a href="<%= (origin || '') + '/contact' %>">Contact</a>
+        <a href="https://www.cpfmoteur.fr/demande-devis" class="nav-cta">Demander un devis</a>
+        <a class="btn btn-outline" href="tel:0465845488">📞 04 65 84 54 88</a>
+        <a class="btn btn-success" href="https://wa.me/330756875025" target="_blank" rel="noopener">🟢 WhatsApp</a>
+      </nav>
     </div>
-    <% if (typeof total !== 'undefined' && typeof limit !== 'undefined') { const max = Math.ceil((total||0)/(limit||1)); if (max > 1) { %>
-      <div style="margin-top:16px">
-        <% if (page > 1) { %>
-          <a class="link" href="<%= pathUrl %>?page=<%= page-1 %>&limit=<%= limit %>">← Précédent</a>
-        <% } %>
-        <% if (page < max) { %>
-          <a class="link" href="<%= pathUrl %>?page=<%= page+1 %>&limit=<%= limit %>">Suivant →</a>
-        <% } %>
+  </header>
+
+  <main class="blog-hero">
+    <div class="blog-hero__grid container">
+      <div>
+        <span class="badge-pill">ACTUALITÉS CPF MOTEUR</span>
+        <h1>Blog moteurs, pannes et conseils d’entretien</h1>
+        <p>Analyses techniques, moteurs testés et retours d’expérience atelier pour guider vos décisions.</p>
+        <div class="blog-hero__stats">
+          <div>
+            <span><%= total || 0 %></span>
+            <small>Articles en ligne</small>
+          </div>
+          <div>
+            <% const tagSet = new Set(); (items||[]).forEach(function(p){ (Array.isArray(p.tags)?p.tags:[]).forEach(function(t){ tagSet.add(String(t)); }); }); const tags = Array.from(tagSet); %>
+            <span><%= tags.length %></span>
+            <small>Tags actifs</small>
+          </div>
+          <div>
+            <span>24h</span>
+            <small>Réponse moyenne devis</small>
+          </div>
+        </div>
       </div>
-    <% } } %>
-  </div>
+      <div class="blog-hero__cta">
+        <div class="cta-card">
+          <div class="cta-head">
+            <div class="cta-icon">⚙️</div>
+            <div>
+              <strong>Besoin d’un moteur ?</strong>
+              <div class="cta-sub">Compatibilité confirmée via VIN</div>
+            </div>
+          </div>
+          <ul class="feature-list">
+            <li>Tests compression / endoscopie</li>
+            <li>Garantie 12 mois</li>
+            <li>Logistique France sous 4-5 jours</li>
+          </ul>
+          <div class="cta-actions">
+            <a class="btn-primary" href="https://www.cpfmoteur.fr/demande-devis">Demander un devis</a>
+            <a class="btn-phone" href="tel:0465845488">📞 04 65 84 54 88</a>
+            <a class="btn-wa" href="https://wa.me/330756875025" target="_blank" rel="noopener">WhatsApp direct</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <section class="blog-content container">
+    <div class="blog-main">
+      <header class="blog-main__head">
+        <div>
+          <h2>Derniers articles</h2>
+          <p>Cas clients, fiches moteurs, prévention des pannes et guides d’entretien.</p>
+        </div>
+      </header>
+
+      <% if (!items || !items.length) { %>
+        <div class="blog-empty">
+          <p>Aucun article n’est encore publié. Revenez bientôt !</p>
+          <a class="btn-primary" href="https://www.cpfmoteur.fr/demande-devis">Contacter l’équipe</a>
+        </div>
+      <% } %>
+
+      <div class="blog-cards">
+        <% (items||[]).forEach(function(p){ %>
+          <article class="blog-card">
+            <% if (p.image) { %>
+              <img src="<%= p.image %>" alt="<%= p.title %>" loading="lazy" decoding="async" />
+            <% } else { %>
+              <div class="blog-card__placeholder">CPF</div>
+            <% } %>
+            <div class="blog-card__body">
+              <% if (Array.isArray(p.tags) && p.tags.length) { %>
+                <div class="blog-card-tags">
+                  <% p.tags.slice(0,3).forEach(function(tag){ %>
+                    <span class="blog-card-tag">#<%= tag %></span>
+                  <% }) %>
+                </div>
+              <% } %>
+              <h3><a href="/blog/<%= p.slug %>"><%= p.title %></a></h3>
+              <p><%= (p.summary || '').slice(0, 180) %><%= (p.summary||'').length>180 ? '…' : '' %></p>
+              <div class="blog-card-meta">
+                <% if (p.publishedAt) { %><span>Publié le <%= new Date(p.publishedAt).toLocaleDateString('fr-FR') %></span><% } %>
+                <span>Lecture rapide</span>
+              </div>
+              <a class="blog-card-link" href="/blog/<%= p.slug %>">Lire l’article →</a>
+            </div>
+          </article>
+        <% }) %>
+      </div>
+
+      <% if (typeof total !== 'undefined' && typeof limit !== 'undefined') {
+          const max = Math.ceil((total||0)/(limit||1));
+          if (max > 1) { %>
+        <nav class="pagination" aria-label="Pagination blog">
+          <% if (page > 1) { %>
+            <a href="<%= pathUrl %>?page=<%= page-1 %>&limit=<%= limit %>">← Précédent</a>
+          <% } else { %>
+            <span class="pagination__disabled">← Précédent</span>
+          <% } %>
+          <span>Page <%= page %> / <%= max %></span>
+          <% if (page < max) { %>
+            <a href="<%= pathUrl %>?page=<%= page+1 %>&limit=<%= limit %>">Suivant →</a>
+          <% } else { %>
+            <span class="pagination__disabled">Suivant →</span>
+          <% } %>
+        </nav>
+      <% } } %>
+    </div>
+
+    <aside class="blog-sidebar">
+      <section class="blog-panel">
+        <h3>Explorer par tags</h3>
+        <% if (tags.length) { %>
+          <div class="blog-tags-list">
+            <% tags.slice(0, 15).forEach(function(tag){ %>
+              <a class="blog-tag-link" href="/blog/tag/<%= encodeURIComponent(String(tag).toLowerCase()) %>">#<%= tag %></a>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <p>Aucun tag disponible pour le moment.</p>
+        <% } %>
+      </section>
+
+      <section class="blog-panel blog-sidebar-cta">
+        <h3>Assistance experte</h3>
+        <p>Besoin de vérifier un moteur ou un VIN ? Nos techniciens vous répondent en quelques heures.</p>
+        <ul>
+          <li>Compatibilité confirmée</li>
+          <li>Rapport de tests détaillé</li>
+          <li>Logistique France & DOM</li>
+        </ul>
+        <a class="btn-primary" href="https://www.cpfmoteur.fr/demande-devis">Parler à un expert</a>
+      </section>
+    </aside>
+  </section>
+
+  <%- include('../partials/footer', { origin }) %>
 </body>
 </html>

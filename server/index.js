@@ -328,6 +328,7 @@ app.get('/moteurs/:marque', async (req, res) => {
       .limit(limit)
       .toArray();
     const origin = getWebsiteOrigin();
+    const assetsOrigin = SERVER_LOCAL;
     const pathUrl = `/moteurs/${encodeURIComponent(slugify(brand))}`;
     const title = `Moteurs ${brand} — Catalogue par code moteur`;
     const description = `Catalogue des moteurs testés & garantis pour ${brand}. Recherchez par code moteur et demandez un devis.`;
@@ -376,6 +377,55 @@ app.get('/moteur/:brand/:model', async (req, res) => {
     }
     return next();
   } catch { return next(); }
+});
+
+// === Auth admin (simple) — top-level ===
+function getCookie(req, name) {
+  try {
+    const raw = String(req.headers.cookie || '');
+    const parts = raw.split(';').map(s => s.trim());
+    for (const p of parts) {
+      if (!p) continue;
+      const i = p.indexOf('=');
+      if (i === -1) continue;
+      const k = p.slice(0, i).trim();
+      const v = p.slice(i + 1).trim();
+      if (k === name) return decodeURIComponent(v);
+    }
+  } catch {}
+  return '';
+}
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const pass = String((req.body || {}).password || '').trim();
+    const expected = String(process.env.ADMIN_PASSWORD || '').trim();
+    if (!expected) return res.status(503).json({ ok: false, error: 'admin_password_not_set' });
+    if (pass !== expected) return res.status(401).json({ ok: false, error: 'invalid_password' });
+    res.setHeader('Set-Cookie', `cpf_admin=1; Max-Age=604800; Path=/; HttpOnly; SameSite=Lax`);
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ ok: false, error: 'login_failed' });
+  }
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const v = getCookie(req, 'cpf_admin');
+    if (v === '1') return res.json({ ok: true });
+    return res.status(401).json({ ok: false });
+  } catch {
+    return res.status(401).json({ ok: false });
+  }
+});
+
+app.post('/api/auth/logout', async (req, res) => {
+  try {
+    res.setHeader('Set-Cookie', `cpf_admin=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax`);
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ ok: false });
+  }
 });
 
 // === Admin: Cloudflare Images (upload direct, liste, suppression, renommage) — top-level ===
@@ -978,15 +1028,16 @@ app.get('/blog', async (req, res) => {
     const col = mongoDb.collection('blog_posts');
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || '12'), 10) || 12));
-    const filter = { status: 'published', noindex: { $ne: true } };
+    const filter = { status: 'published' };
     const total = await col.countDocuments(filter);
     const items = await col
-      .find(filter, { projection: { title: 1, slug: 1, summary: 1, image: 1, publishedAt: 1 } })
+      .find(filter, { projection: { title: 1, slug: 1, summary: 1, image: 1, publishedAt: 1, tags: 1 } })
       .sort({ publishedAt: -1, updatedAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
       .toArray();
     const origin = getWebsiteOrigin();
+    const assetsOrigin = `${req.protocol}://${req.get('host')}`;
     const pathUrl = '/blog';
     const title = 'Blog — Car Parts France';
     const description = 'Conseils moteurs, pannes, compatibilités et entretien.';
@@ -994,7 +1045,7 @@ app.get('/blog', async (req, res) => {
     const prevUrl = page > 1 ? `${pathUrl}?page=${page - 1}` : null;
     const nextUrl = (page * limit < total) ? `${pathUrl}?page=${page + 1}` : null;
     res.setHeader('Cache-Control', 'public, max-age=300');
-    return res.render('blog/index', { origin, pathUrl, title, description, canonical, items, page, limit, total, gsc: process.env.GOOGLE_SITE_VERIFICATION || '', prevUrl, nextUrl });
+    return res.render('blog/index', { origin, assetsOrigin, pathUrl, title, description, canonical, items, page, limit, total, gsc: process.env.GOOGLE_SITE_VERIFICATION || '', prevUrl, nextUrl });
   } catch (err) {
     return res.status(500).send('<!doctype html><html><body><p>Erreur serveur.</p></body></html>');
   }
@@ -1011,7 +1062,7 @@ app.get('/blog/tag/:tag', async (req, res) => {
     const col = mongoDb.collection('blog_posts');
     const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit || '12'), 10) || 12));
-    const filter = { status: 'published', noindex: { $ne: true }, tags: { $in: [raw, tag] } };
+    const filter = { status: 'published', tags: { $in: [raw, tag] } };
     const total = await col.countDocuments(filter);
     const items = await col
       .find(filter, { projection: { title: 1, slug: 1, summary: 1, image: 1, publishedAt: 1 } })
@@ -1020,6 +1071,7 @@ app.get('/blog/tag/:tag', async (req, res) => {
       .limit(limit)
       .toArray();
     const origin = getWebsiteOrigin();
+    const assetsOrigin = SERVER_LOCAL;
     const pathUrl = `/blog/tag/${encodeURIComponent(tag)}`;
     const title = `Articles tag: ${raw} — Car Parts France`;
     const description = `Tous nos articles liés à ${raw}.`;
@@ -1027,7 +1079,7 @@ app.get('/blog/tag/:tag', async (req, res) => {
     const prevUrl = page > 1 ? `${pathUrl}?page=${page - 1}` : null;
     const nextUrl = (page * limit < total) ? `${pathUrl}?page=${page + 1}` : null;
     res.setHeader('Cache-Control', 'public, max-age=300');
-    return res.render('blog/index', { origin, pathUrl, title, description, canonical, items, page, limit, total, gsc: process.env.GOOGLE_SITE_VERIFICATION || '', prevUrl, nextUrl });
+    return res.render('blog/index', { origin, assetsOrigin, pathUrl, title, description, canonical, items, page, limit, total, gsc: process.env.GOOGLE_SITE_VERIFICATION || '', prevUrl, nextUrl });
   } catch (err) {
     return res.status(500).send('<!doctype html><html><body><p>Erreur serveur.</p></body></html>');
   }
@@ -1043,12 +1095,13 @@ app.get('/blog/:slug', async (req, res) => {
     const doc = await col.findOne({ slug, status: 'published' });
     if (!doc) return res.status(404).send('<!doctype html><html><body><p>Article introuvable.</p></body></html>');
     const origin = getWebsiteOrigin();
+    const assetsOrigin = SERVER_LOCAL;
     const pathUrl = `/blog/${encodeURIComponent(slug)}`;
     const title = doc.seoTitle || doc.title || 'Article';
     const description = doc.seoDescription || doc.summary || '';
     const canonical = `${origin}${pathUrl}`;
     const ogImage = doc.image || '';
-    const noindex = Boolean(doc.noindex) || isThinBlogPost(doc);
+    const noindex = false;
     let related = [];
     if (Array.isArray(doc.tags) && doc.tags.length) {
       related = await col.find(
@@ -1074,7 +1127,7 @@ app.get('/blog/:slug', async (req, res) => {
       }
     } catch {}
     res.setHeader('Cache-Control', 'public, max-age=300');
-    return res.render('blog/post', { origin, pathUrl, title, description, canonical, ogImage, noindex, post: doc, related, prev, next, gsc: process.env.GOOGLE_SITE_VERIFICATION || '' });
+    return res.render('blog/post', { origin, assetsOrigin, pathUrl, title, description, canonical, ogImage, noindex, post: doc, related, prev, next, gsc: process.env.GOOGLE_SITE_VERIFICATION || '' });
   } catch (err) {
     return res.status(500).send('<!doctype html><html><body><p>Erreur serveur.</p></body></html>');
   }
@@ -1402,7 +1455,7 @@ app.get('/sitemap.xml', async (req, res) => {
       await ensureBlogIndexes();
       const bcol = mongoDb.collection('blog_posts');
       const posts = await bcol.find(
-        { status: 'published', noindex: { $ne: true } },
+        { status: 'published' },
         { projection: { slug: 1, updatedAt: 1, publishedAt: 1 } }
       ).toArray();
       for (const p of posts) {
