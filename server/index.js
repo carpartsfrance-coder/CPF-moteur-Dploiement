@@ -1100,7 +1100,7 @@ app.get('/blog/:slug', async (req, res) => {
     const title = doc.seoTitle || doc.title || 'Article';
     const description = doc.seoDescription || doc.summary || '';
     const canonical = `${origin}${pathUrl}`;
-    const ogImage = doc.image || '';
+    const ogImage = doc.image || '/assets/blog-cover.svg';
     const noindex = false;
     let related = [];
     if (Array.isArray(doc.tags) && doc.tags.length) {

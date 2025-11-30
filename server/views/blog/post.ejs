@@ -284,6 +284,7 @@
       <nav class="site-nav">
         <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a>
         <a href="<%= (origin || '') + '/a-propos' %>">À propos</a>
+        <a href="<%= (origin || '') + '/tests-moteurs' %>">Tests moteurs</a>
         <a href="<%= (origin || '') + '/contact' %>">Contact</a>
         <a href="https://www.cpfmoteur.fr/demande-devis" class="nav-cta">Demander un devis</a>
         <a class="btn btn-outline" href="tel:0465845488">📞 04 65 84 54 88</a>
@@ -406,7 +407,7 @@
             <div class="related-slider">
               <% related.forEach(function(r){ %>
                 <a class="card" href="/blog/<%= r.slug %>">
-                  <% if (r.image) { %><img src="<%= r.image %>" alt="<%= r.title %>" loading="lazy" decoding="async" /><% } %>
+                  <img src="<%= r.image || '/assets/blog-cover.svg' %>" alt="<%= r.title %>" loading="lazy" decoding="async" />
                   <div class="card-body">
                     <div class="card-title"><%= r.title %></div>
                     <div class="card-meta">
