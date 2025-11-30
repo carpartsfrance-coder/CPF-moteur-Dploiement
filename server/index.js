@@ -328,7 +328,7 @@ app.get('/moteurs/:marque', async (req, res) => {
       .limit(limit)
       .toArray();
     const origin = getWebsiteOrigin();
-    const assetsOrigin = SERVER_LOCAL;
+    const assetsOrigin = `${req.protocol}://${req.get('host')}`;
     const pathUrl = `/moteurs/${encodeURIComponent(slugify(brand))}`;
     const title = `Moteurs ${brand} — Catalogue par code moteur`;
     const description = `Catalogue des moteurs testés & garantis pour ${brand}. Recherchez par code moteur et demandez un devis.`;
@@ -1037,7 +1037,7 @@ app.get('/blog', async (req, res) => {
       .limit(limit)
       .toArray();
     const origin = getWebsiteOrigin();
-    const assetsOrigin = `${req.protocol}://${req.get('host')}`;
+    const assetsOrigin = '';
     const pathUrl = '/blog';
     const title = 'Blog — Car Parts France';
     const description = 'Conseils moteurs, pannes, compatibilités et entretien.';
@@ -1071,7 +1071,7 @@ app.get('/blog/tag/:tag', async (req, res) => {
       .limit(limit)
       .toArray();
     const origin = getWebsiteOrigin();
-    const assetsOrigin = SERVER_LOCAL;
+    const assetsOrigin = '';
     const pathUrl = `/blog/tag/${encodeURIComponent(tag)}`;
     const title = `Articles tag: ${raw} — Car Parts France`;
     const description = `Tous nos articles liés à ${raw}.`;
@@ -1095,7 +1095,7 @@ app.get('/blog/:slug', async (req, res) => {
     const doc = await col.findOne({ slug, status: 'published' });
     if (!doc) return res.status(404).send('<!doctype html><html><body><p>Article introuvable.</p></body></html>');
     const origin = getWebsiteOrigin();
-    const assetsOrigin = SERVER_LOCAL;
+    const assetsOrigin = '';
     const pathUrl = `/blog/${encodeURIComponent(slug)}`;
     const title = doc.seoTitle || doc.title || 'Article';
     const description = doc.seoDescription || doc.summary || '';

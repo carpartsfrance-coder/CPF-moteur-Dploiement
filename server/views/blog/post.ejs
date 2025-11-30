@@ -25,7 +25,7 @@
   <% if (description) { %><meta name="twitter:description" content="<%= description %>"><% } %>
   <% if (gsc) { %><meta name="google-site-verification" content="<%= gsc %>"><% } %>
 
-  <link rel="stylesheet" href="<%= (typeof assetsOrigin !== 'undefined' && assetsOrigin) ? (assetsOrigin + '/assets/blog.css') : '/assets/blog.css' %>">
+  <link rel="stylesheet" href="<%= (typeof assetsOrigin !== 'undefined' && assetsOrigin) ? (assetsOrigin + '/assets/blog.css?v=' + Date.now()) : ('/assets/blog.css?v=' + Date.now()) %>">
 
   <script type="application/ld+json">
   <%- JSON.stringify({

@@ -1,0 +1,2 @@
+/* Proxy du nouveau design blog: doublon placé à /public/blog.css pour compat héritage */
+@import url('/assets/blog.css');
