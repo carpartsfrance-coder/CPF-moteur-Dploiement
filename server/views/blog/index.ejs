@@ -28,6 +28,7 @@
         <img src="<%= (origin || '').replace(/\/$/, '') %>/images/logo.png" alt="Car Parts France" style="height:50px; width:auto; border-radius:6px" />
         <span>Car Parts France</span>
       </a>
+      <button class="menu-toggle" type="button" aria-label="Ouvrir le menu">☰ Menu</button>
       <nav class="site-nav">
         <a href="<%= (origin || '').replace(/\/$/, '/') %>">Accueil</a>
         <a href="<%= (origin || '') + '/a-propos' %>">À propos</a>
@@ -193,5 +194,14 @@
   </main>
 
   <%- include('../partials/footer', { origin }) %>
+  <script>
+    (function(){
+      try{
+        var header = document.querySelector('.site-header');
+        var btn = header && header.querySelector('.menu-toggle');
+        if(btn){ btn.addEventListener('click', function(){ header.classList.toggle('is-open'); }); }
+      }catch(e){}
+    })();
+  </script>
 </body>
 </html>
