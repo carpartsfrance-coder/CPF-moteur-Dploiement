@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "functions": {
-    "api/*.js": { "runtime": "nodejs18.x" }
-  },
   "routes": [
     { "src": "^/api/.*", "dest": "/api/[...all].js" },
     { "src": "^/(blog.*|sitemap\\.xml|robots\\.txt)$", "dest": "/api/[...all].js" },
