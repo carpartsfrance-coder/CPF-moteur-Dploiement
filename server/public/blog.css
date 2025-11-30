@@ -281,3 +281,37 @@ a{color:inherit}
 
 /* États */
 .blog-empty{background:#fff;border:1px solid var(--blog-border);border-radius:12px;box-shadow:var(--blog-shadow);padding:20px;text-align:center}
+
+/* === Responsive additions (mobile-first overrides) === */
+@media(max-width:1024px){
+  .hero-content{padding:24px}
+  .featured-body{padding:24px}
+}
+
+@media(max-width:900px){
+  .blog-hero{padding:32px 0}
+  .featured-article{grid-template-columns:1fr}
+  .article-thumb{height:180px}
+}
+
+@media(max-width:700px){
+  .site-header .inner{padding:10px 14px}
+  .container{padding:0 14px}
+  .hero-content h1{font-size:30px}
+  .hero-content>p{font-size:16px;margin-bottom:18px}
+  .metric-card{padding:14px}
+  .article-grid{grid-template-columns:1fr}
+  .article-thumb{height:160px}
+  .article-content h3{font-size:18px}
+  .article-content p{font-size:14px}
+  .feed-aside{gap:16px}
+  .aside-card{padding:18px}
+  .pagination{font-size:13px}
+}
+
+@media(max-width:520px){
+  .hero-cta{gap:10px}
+  .hero-cta .btn-primary, .hero-cta .btn-outline{width:100%}
+  .hero-card-cta .btn-primary, .hero-card-cta .btn-outline{width:100%}
+  .btn-primary,.btn-outline{padding:11px 18px}
+}
