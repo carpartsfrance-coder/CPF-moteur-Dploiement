@@ -64,6 +64,7 @@ const AdminQuotes: React.FC = () => {
   const [replyMessage, setReplyMessage] = useState('');
   const [attachments, setAttachments] = useState<AttachmentInput[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [attachmentSeq, setAttachmentSeq] = useState(1);
   const [price, setPrice] = useState('');
   const [buyPrice, setBuyPrice] = useState('');
   const [mileageKm, setMileageKm] = useState('');
@@ -216,6 +217,7 @@ const AdminQuotes: React.FC = () => {
       'CAR PARTS FRANCE',
     ].join('\n'));
     setAttachments([]);
+    setAttachmentSeq(1);
     setPrice('');
     setBuyPrice('');
     setMileageKm('');
@@ -227,6 +229,27 @@ const AdminQuotes: React.FC = () => {
     setItems([]);
     setTests({ compression: true, endoscopy: true, oilPressure: true, oilAnalysis: true, visualInspection: true });
     setDefectObserved('');
+    (async () => {
+      try {
+        const res = await fetch('/rapports/exemple-rapport-tests-moteur.pdf', { cache: 'no-store' });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const dataUrl: string = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        const type = blob.type || 'application/pdf';
+        const size = estimateBytesFromDataURL(dataUrl);
+        let ext = '.pdf';
+        if (type === 'image/webp') ext = '.webp';
+        else if (type === 'image/jpeg' || type === 'image/jpg') ext = '.jpg';
+        else if (type === 'image/png') ext = '.png';
+        setAttachments((prev) => [...prev, { filename: `CPF MOTEUR 1${ext}`, content: dataUrl, type, size }]);
+        setAttachmentSeq((s) => s + 1);
+      } catch {}
+    })();
     void loadClientReplies(quote.id);
   };
 
@@ -336,7 +359,22 @@ const AdminQuotes: React.FC = () => {
         }
       } catch {}
     }
-    if (prepared.length) setAttachments((prev) => [...prev, ...prepared]);
+    if (prepared.length) {
+      const renamed = prepared.map((a, idx) => {
+        const m = a.filename.match(/\.[^.]+$/);
+        let ext = m ? m[0] : '';
+        if (!ext) {
+          if (a.type === 'application/pdf') ext = '.pdf';
+          else if (a.type === 'image/webp') ext = '.webp';
+          else if (a.type === 'image/jpeg' || a.type === 'image/jpg') ext = '.jpg';
+          else if (a.type === 'image/png') ext = '.png';
+        }
+        const num = attachmentSeq + idx;
+        return { ...a, filename: `CPF MOTEUR ${num}${ext || ''}` };
+      });
+      setAttachments((prev) => [...prev, ...renamed]);
+      setAttachmentSeq(attachmentSeq + renamed.length);
+    }
   };
 
   const removeAttachmentAt = (idx: number) => {
