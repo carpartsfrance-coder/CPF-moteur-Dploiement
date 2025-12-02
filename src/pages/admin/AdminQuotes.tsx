@@ -68,6 +68,7 @@ const AdminQuotes: React.FC = () => {
   const [price, setPrice] = useState('');
   const [buyPrice, setBuyPrice] = useState('');
   const [mileageKm, setMileageKm] = useState('');
+  const [vehicleYear, setVehicleYear] = useState('');
   const [delivery, setDelivery] = useState('Entre 8 et 12 jours');
   const [reference, setReference] = useState('');
   const [deliveryCost, setDeliveryCost] = useState('189');
@@ -161,6 +162,39 @@ const AdminQuotes: React.FC = () => {
     return buy * 1.4;
   };
 
+  const extractYearFromText = (s: string) => {
+    try {
+      const current = new Date().getFullYear();
+      const matches = String(s || '').match(/\b(19\d{2}|20\d{2})\b/g) || [];
+      for (const m of matches) {
+        const y = parseInt(m, 10);
+        if (y >= 1990 && y <= current) return y;
+      }
+      return NaN;
+    } catch { return NaN; }
+  };
+
+  const getMileageBoundsForYear = (y: number) => {
+    if (!Number.isFinite(y)) return { min: 10000, max: 30000 };
+    if (y <= 2004) return { min: 102000, max: 130000 };
+    if (y <= 2009) return { min: 95000, max: 125000 };
+    if (y <= 2014) return { min: 90000, max: 115000 };
+    if (y <= 2016) return { min: 100000, max: 110000 };
+    if (y <= 2019) return { min: 80000, max: 90000 };
+    if (y <= 2021) return { min: 60000, max: 75000 };
+    if (y <= 2023) return { min: 35000, max: 55000 };
+    return { min: 15000, max: 30000 };
+  };
+
+  const generateMileageForYear = (y: number) => {
+    const { min, max } = getMileageBoundsForYear(y);
+    const minK = Math.round(min / 1000) * 1000;
+    const maxK = Math.round(max / 1000) * 1000;
+    const steps = Math.max(1, Math.floor((maxK - minK) / 1000));
+    const idx = Math.floor(Math.random() * (steps + 1));
+    return minK + idx * 1000;
+  };
+
   const handleDelete = (id: string) => {
     deleteQuote(id);
     forceRender();
@@ -221,6 +255,7 @@ const AdminQuotes: React.FC = () => {
     setPrice('');
     setBuyPrice('');
     setMileageKm('');
+    setVehicleYear('');
     setDelivery('Entre 8 et 12 jours');
     setReference('');
     setDeliveryCost('189');
@@ -229,6 +264,13 @@ const AdminQuotes: React.FC = () => {
     setItems([]);
     setTests({ compression: true, endoscopy: true, oilPressure: true, oilAnalysis: true, visualInspection: true });
     setDefectObserved('');
+    try {
+      const yr = extractYearFromText(`${quote.vehicleId || ''} ${quote.message || ''}`);
+      if (Number.isFinite(yr)) {
+        setVehicleYear(String(yr));
+        setMileageKm(String(generateMileageForYear(yr)));
+      }
+    } catch {}
     (async () => {
       try {
         const res = await fetch('/rapports/exemple-rapport-tests-moteur.pdf', { cache: 'no-store' });
@@ -260,6 +302,7 @@ const AdminQuotes: React.FC = () => {
     setPrice('');
     setBuyPrice('');
     setMileageKm('');
+    setVehicleYear('');
     setDelivery('');
     setReference('');
     setDeliveryCost('');
@@ -719,6 +762,18 @@ const AdminQuotes: React.FC = () => {
                     fullWidth
                     InputProps={{ endAdornment: <InputAdornment position="end">km</InputAdornment> }}
                   />
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      const y = parseInt(vehicleYear, 10);
+                      if (Number.isFinite(y) && y >= 1990 && y <= new Date().getFullYear()) {
+                        setMileageKm(String(generateMileageForYear(y)));
+                      }
+                    }}
+                    disabled={!/^((19|20)\d{2})$/.test(vehicleYear)}
+                  >
+                    Régénérer
+                  </Button>
                 </Stack>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <TextField
@@ -727,6 +782,22 @@ const AdminQuotes: React.FC = () => {
                     value={delivery}
                     onChange={(e) => setDelivery(e.target.value)}
                     disabled
+                    fullWidth
+                  />
+                  <TextField
+                    label="Année du véhicule"
+                    placeholder="ex: 2015"
+                    value={vehicleYear}
+                    onChange={(e) => {
+                      const raw = (e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4);
+                      setVehicleYear(raw);
+                      if (raw.length === 4) {
+                        const y = parseInt(raw, 10);
+                        if (y >= 1990 && y <= new Date().getFullYear()) {
+                          setMileageKm(String(generateMileageForYear(y)));
+                        }
+                      }
+                    }}
                     fullWidth
                   />
                   <TextField
