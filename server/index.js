@@ -5,7 +5,7 @@ import cors from 'cors';
 import { MailerSend, EmailParams, Sender, Recipient, Attachment } from 'mailersend';
 import crypto from 'crypto';
 import { addReply, getReplies, setQuoteMeta, getQuoteMeta, listQuoteMetas } from './storage.js';
-import buildReplyEmailHtml from './emailTemplate.js';
+import buildReplyEmailHtml, { buildAckEmailHtml } from './emailTemplate.js';
 import path from 'path';
 import fs from 'fs';
 import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
@@ -1308,7 +1308,7 @@ app.post('/api/public/quote-request', async (req, res) => {
     await sendWithRetry(mailer, emailParams, 2);
 
     if (email) {
-      const userSubject = `Nous avons bien reçu votre demande de devis (${ref})`;
+      const userSubject = `Accusé de réception — demande bien reçue (${ref})`;
       const origin = getWebsiteOrigin();
       const socialLogos = [
         { src: `${origin}/images/partners/logo-porsche.webp`, alt: 'Centre Porsche Toulon' },
@@ -1341,7 +1341,7 @@ app.post('/api/public/quote-request', async (req, res) => {
         reference: ref,
         delivery: 'Devis détaillé sous 24h ouvrées, expédition 72h à 14 jours (assurance casse/perte)'
       };
-      const userHtml = buildReplyEmailHtml({
+      const userHtml = buildAckEmailHtml({
         subject: userSubject,
         toName: name || '',
         message: userMessage,
@@ -1349,11 +1349,7 @@ app.post('/api/public/quote-request', async (req, res) => {
         websiteUrl: process.env.COMPANY_WEBSITE_URL || '',
         supportEmail: fromEmail,
         logoUrl: `${origin}/images/logo.png`,
-        socialProof: { logos: socialLogos },
         nextSteps,
-        testsPageUrl,
-        details,
-        replyNotice,
         replyOptions,
         companyInfo,
       });

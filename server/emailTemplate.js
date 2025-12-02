@@ -256,6 +256,97 @@ export const buildReplyEmailHtml = ({
 </html>`;
 };
 
+export const buildAckEmailHtml = ({
+  companyName = 'Car Parts France',
+  logoUrl = '',
+  subject = 'Nous avons bien re&ccedil;u votre demande',
+  toName = '',
+  message = '',
+  websiteUrl = '',
+  supportEmail = '',
+  replyOptions = undefined,
+  nextSteps = undefined,
+  companyInfo = undefined,
+} = {}) => {
+  const safe = (v) => escapeHtml(String(v ?? ''));
+  const nl2br = (v) => safe(v).replace(/\n/g, '<br />');
+  const clientName = String(toName || '').trim();
+  const phone = String(companyInfo?.phone || '04 65 84 76 78');
+  const siren = String(companyInfo?.siren || '907 510 838');
+  const safePhoneLink = phone.replace(/\D+/g, '');
+  return `<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safe(subject)}</title>
+  </head>
+  <body style="margin:0; padding:0; background:#f3f4f6;">
+    <div style="max-width: 780px; margin: 32px auto; padding: 14px; border: 3px solid #2f2f2f; border-radius: 12px; background: #e5e7eb; box-sizing: border-box;">
+      <table role="presentation" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 6px 18px rgba(15,23,42,0.15);" border="0" width="100%" cellspacing="0" cellpadding="0">
+        <tbody>
+        <tr>
+          <td style="padding: 18px 26px 12px 26px; background: #ffffff;">
+            <table role="presentation" border="0" width="100%" cellspacing="0" cellpadding="0">
+              <tbody>
+                <tr>
+                  <td align="left" valign="middle">
+                    ${logoUrl ? `<img style="max-width: 210px; height: auto; display: block;" src="${safe(logoUrl)}" alt="${safe(companyName)}" />` : ''}
+                  </td>
+                  <td style="font-size: 12px; color: #111827;" align="right" valign="middle">
+                    <div style="text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; color: #6b7280; margin-bottom: 4px;">Accus&eacute; de r&eacute;ception</div>
+                    <div style="font-size: 13px; color: #111827;">Service client<br /><span style="font-weight: bold; color: #e30613;">${safe(phone)}</span></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0 26px 16px 26px; border-bottom: 1px solid #e5e7eb;">
+            <h1 style="margin: 8px 0 6px 0; font-size: 20px; color: #111827;">${safe(subject)}</h1>
+            ${clientName ? `<p style="margin: 0; font-size: 13px; color: #6b7280;">Client : <strong>${safe(clientName)}</strong></p>` : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 18px 26px 10px 26px; font-size: 14px; color: #111827; line-height: 1.6;">
+            ${clientName ? `<p style="margin: 0 0 12px 0;">Bonjour ${safe(clientName)},</p>` : ''}
+            <p style="margin: 0 0 12px 0;">${nl2br(message || 'Merci, votre demande a bien &eacute;t&eacute; re&ccedil;ue. Ceci est un accus&eacute; de r&eacute;ception, pas un devis. Notre &eacute;quipe revient vers vous sous 24h ouvr&eacute;es avec une proposition d&eacute;taill&eacute;e.')}</p>
+          </td>
+        </tr>
+        ${Array.isArray(nextSteps) && nextSteps.length ? `
+        <tr>
+          <td style="padding: 0 26px 16px 26px;">
+            <div style="margin: 16px 0; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 18px; background: #f2f6ff;">
+              <div style="font-weight: 700; color: #1d3557; margin-bottom: 8px;">Ce qui va se passer ensuite</div>
+              <ol style="padding-left: 18px; margin: 0; color: #111827;">
+                ${nextSteps.map((step) => `<li style="margin-bottom: 6px; line-height: 1.5;">${safe(String(step))}</li>`).join('')}
+              </ol>
+            </div>
+          </td>
+        </tr>` : ''}
+        <tr>
+          <td style="padding: 18px 26px 10px 26px;">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #111827;">Pour toute pr&eacute;cision, le plus simple est de nous appeler :</p>
+            <a style="display: inline-block; padding: 12px 26px; border-radius: 999px; background: #e30613; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 15px;" href="tel:${safePhoneLink}"> ${safe(phone)} </a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 26px 6px 26px;">
+            <p style="margin: 0 0 6px 0; font-size: 14px; color: #111827;">Cordialement,</p>
+            <p style="margin: 0 0 10px 0; font-size: 13px; color: #4b5563;"><strong>L&rsquo;&eacute;quipe ${safe(companyName)}</strong></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background: #000000; color: #d1d5db; text-align: center; padding: 10px 26px; font-size: 11px;">CPF Moteur &ndash; ${safe(companyName)} &middot; SIREN ${safe(siren)}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>`;
+};
+
 // ==========================
 // Nouveau template (CPF Moteur)
 // ==========================
