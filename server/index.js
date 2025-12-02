@@ -4,7 +4,7 @@ import compression from 'compression';
 import cors from 'cors';
 import { MailerSend, EmailParams, Sender, Recipient, Attachment } from 'mailersend';
 import crypto from 'crypto';
-import { addReply, getReplies, setQuoteMeta, getQuoteMeta } from './storage.js';
+import { addReply, getReplies, setQuoteMeta, getQuoteMeta, listQuoteMetas } from './storage.js';
 import buildReplyEmailHtml from './emailTemplate.js';
 import path from 'path';
 import fs from 'fs';
@@ -1371,10 +1371,185 @@ app.post('/api/public/quote-request', async (req, res) => {
       setQuoteMeta(ref, { name, email, phone, vehicleId, message, source, createdAt, deliveredAt: new Date().toISOString() });
     } catch {}
 
+    // Persistance en base (si MongoDB configuré)
+    try {
+      if (MONGODB_URI) {
+        await initMongo();
+        const col = mongoDb.collection('quotes');
+        await col.insertOne({
+          id: ref,
+          name,
+          email,
+          phone,
+          vehicleId,
+          message,
+          source,
+          createdAt,
+          deliveredAt: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.error('[quotes insert] mongo error', e?.message || e);
+    }
+
     return res.json({ ok: true, ref });
   } catch (err) {
     console.error('[quote-request] error', err);
     return res.status(500).json({ ok: false, error: 'send_failed' });
+  }
+});
+
+// === Admin: liste des devis enregistrés (basés sur les métadonnées stockées) ===
+app.get('/api/admin/quotes', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+    let quotes = [];
+    if (MONGODB_URI) {
+      try {
+        await initMongo();
+        const col = mongoDb.collection('quotes');
+        const arr = await col.find({}, { sort: { createdAt: -1 } }).limit(500).toArray();
+        quotes = arr.map((d) => ({ id: String(d.id || d._id || ''), name: d.name || '', email: d.email || '', phone: d.phone || '', vehicleId: d.vehicleId || '', message: d.message || '', createdAt: String(d.createdAt || d.deliveredAt || new Date().toISOString()) }));
+      } catch (e) {
+        console.error('[admin quotes] mongo read error', e?.message || e);
+        quotes = listQuoteMetas();
+      }
+    } else {
+      quotes = listQuoteMetas();
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, quotes });
+  } catch (err) {
+    console.error('[admin quotes] error', err);
+    return res.status(500).json({ ok: false, error: 'list_error' });
+  }
+});
+
+// === Admin: envoi d'une réponse au client (email via MailerSend) ===
+app.post('/api/devis/:id/reponse', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+
+    const quoteId = String((req.params?.id || req.body?.quoteId || '')).trim();
+    const channel = String((req.body?.channel || 'email')).trim();
+    if (!quoteId) return res.status(400).json({ ok: false, error: 'missing_quote_id' });
+    if (channel !== 'email') return res.status(400).json({ ok: false, error: 'unsupported_channel' });
+
+    const toEmail = String(req.body?.toEmail || '').trim();
+    const toName = String(req.body?.toName || '').trim();
+    const subject = String(req.body?.subject || 'Réponse à votre devis - Car Parts France').trim();
+    const message = String(req.body?.message || '').trim();
+    const attachmentsIn = Array.isArray(req.body?.attachments) ? req.body.attachments : [];
+    const extras = req.body?.extras || {};
+
+    if (!toEmail || !message) return res.status(400).json({ ok: false, error: 'missing_fields' });
+
+    const fromEmail = (process.env.MAILERSEND_FROM_EMAIL || 'contact@cpfmoteur.fr').trim();
+    const fromName = (process.env.MAILERSEND_FROM_NAME || 'Car Parts France').trim();
+    const apiKey = (process.env.MAILERSEND_API_KEY || '').trim();
+    if (!apiKey) return res.status(500).json({ ok: false, error: 'missing_mailersend_key' });
+
+    const origin = getWebsiteOrigin();
+
+    const mailer = new MailerSend({ apiKey });
+    const emailParams = new EmailParams()
+      .setFrom(new Sender(fromEmail, fromName))
+      .setTo([new Recipient(toEmail, toName || 'Client')])
+      .setSubject(subject)
+      .setHtml(buildReplyEmailHtml({
+        subject,
+        toName,
+        message,
+        companyName: 'Car Parts France',
+        websiteUrl: process.env.COMPANY_WEBSITE_URL || origin,
+        supportEmail: fromEmail,
+        logoUrl: `${origin}/images/logo.png`,
+        details: {
+          price: extras?.price,
+          mileageKm: extras?.mileageKm,
+          delivery: extras?.delivery,
+          deliveryCost: extras?.deliveryCost,
+          reference: extras?.reference || quoteId,
+          warranty: extras?.warranty,
+          vehicleId: extras?.vehicleId,
+          engineCode: extras?.engineCode,
+          configuration: extras?.configuration,
+          items: Array.isArray(extras?.items) ? extras.items : [],
+          testsPerformed: Array.isArray(extras?.testsPerformed) ? extras.testsPerformed : [],
+          defectObserved: extras?.defectObserved,
+        }
+      }))
+      .setText([message, '', `Référence: ${quoteId}`].join('\n'))
+      .setReplyTo(new Sender(fromEmail, fromName));
+
+    // Conversion des pièces jointes: data URL (ou base64 direct) -> Attachment
+    const mailerAttachments = [];
+    for (const a of attachmentsIn) {
+      try {
+        const filename = String(a?.filename || 'piece-jointe');
+        let type = String(a?.type || 'application/octet-stream');
+        let contentB64 = String(a?.content || '');
+        const m = /^data:([^;]+);base64,(.+)$/i.exec(contentB64);
+        if (m) { type = m[1] || type; contentB64 = m[2] || ''; }
+        if (!contentB64) continue;
+        // Attachment(content, filename, type)
+        mailerAttachments.push(new Attachment(contentB64, filename));
+      } catch {}
+    }
+    if (mailerAttachments.length && typeof emailParams.setAttachments === 'function') {
+      emailParams.setAttachments(mailerAttachments);
+    }
+
+    await sendWithRetry(mailer, emailParams, 2);
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[admin reply] error', err?.message || err);
+    return res.status(500).json({ ok: false, error: 'send_failed' });
+  }
+});
+
+// === Admin: récupère les réponses client enregistrées pour un devis donné ===
+app.get('/api/replies/:id', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+    const replies = getReplies(id);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, replies });
+  } catch (err) {
+    console.error('[replies get] error', err);
+    return res.status(500).json({ ok: false, error: 'read_error' });
   }
 });
 
@@ -2417,6 +2592,20 @@ if (!process.env.VERCEL) {
         time: new Date().toISOString(),
         mongoConfigured: Boolean(MONGODB_URI),
       });
+    } catch (e) {
+      res.status(500).json({ ok: false });
+    }
+  });
+
+  app.get('/api/public/_debug-auth', (req, res) => {
+    try {
+      const t = String(process.env.BACKEND_TOKEN || '');
+      const auth = String(req.headers['authorization'] || '');
+      const apik = String(req.headers['x-api-key'] || '');
+      const host = String(req.headers['host'] || '');
+      const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+      const mask = (s) => s ? (s.length <= 6 ? s : (s.slice(0,3) + '...' + s.slice(-3))) : '';
+      res.json({ ok: true, tokenLen: t.length, tokenMasked: mask(t), authMasked: mask(auth), xApiKeyMasked: mask(apik), host, isLocalHost });
     } catch (e) {
       res.status(500).json({ ok: false });
     }

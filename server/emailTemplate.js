@@ -256,4 +256,207 @@ export const buildReplyEmailHtml = ({
 </html>`;
 };
 
-export default buildReplyEmailHtml;
+// ==========================
+// Nouveau template (CPF Moteur)
+// ==========================
+export const buildReplyEmailHtmlV2 = ({
+  companyName = 'Car Parts France',
+  logoUrl = '',
+  subject = 'Réponse à votre devis - Car Parts France',
+  toName = '',
+  message = '',
+  websiteUrl = '',
+  supportEmail = '',
+  details = undefined,
+  companyInfo = undefined,
+} = {}) => {
+  const safe = (v) => escapeHtml(String(v ?? ''));
+  const nl2br = (v) => safe(v).replace(/\n/g, '<br />');
+  const rawMessage = String(message || '');
+  const hasGreeting = /^\s*(bonjour|bonsoir|bsr)/i.test(rawMessage);
+
+  // Helpers prix / km identiques au template précédent
+  const formatPrice = (v) => {
+    if (v === undefined || v === null) return '';
+    const str = String(v).trim();
+    if (!str) return '';
+    if (/€/.test(str)) return safe(str);
+    const num = Number(String(str).replace(/\s+/g, '').replace(',', '.'));
+    if (!isFinite(num)) return safe(str) + ' €';
+    return safe(num.toLocaleString('fr-FR', { minimumFractionDigits: (String(str).includes('.') || String(str).includes(',')) ? 2 : 0, maximumFractionDigits: 2 })) + ' €';
+  };
+  const toNumber = (v) => {
+    if (v === undefined || v === null) return NaN;
+    const s = String(v).trim();
+    if (!s) return NaN;
+    const num = Number(s.replace(/\s+/g,'').replace(',', '.').replace(/€/g, ''));
+    return Number.isFinite(num) ? num : NaN;
+  };
+
+  const d = details || {};
+  const clientName = String(toName || '').trim();
+  const vehicle = String(d.vehicleId || d.reference || '').trim();
+  const engineCode = String(d.engineCode || d.reference || '').trim();
+  const configuration = String(d.configuration || (Array.isArray(d.items) && d.items[0]?.product) || '').trim();
+  const priceStr = formatPrice(d.price);
+  const shipStr = formatPrice(d.deliveryCost);
+  const warranty = String(d.warranty || (Array.isArray(d.items) && d.items[0]?.warranty) || '').trim();
+  const priceNum = toNumber(d.price);
+  const shipNum = toNumber(d.deliveryCost);
+  const totalNum = (Number.isFinite(priceNum) ? priceNum : 0) + (Number.isFinite(shipNum) ? shipNum : 0);
+  const totalStr = (Number.isFinite(priceNum) || Number.isFinite(shipNum)) ? formatPrice(totalNum) : '';
+
+  const phone = String(companyInfo?.phone || '04 65 84 76 78');
+  const siren = String(companyInfo?.siren || '907 510 838');
+  const safePhoneLink = phone.replace(/\D+/g, '');
+  const brandRightTitle = 'CPF Moteur';
+
+  const headerLogo = logoUrl || 'https://carpartsfrance.fr/wp-content/uploads/2024/08/C-2.png';
+  const safeCompany = safe(companyName);
+
+  // Liste de tests (par défaut si rien fourni)
+  const tests = Array.isArray(d.testsPerformed) && d.testsPerformed.length
+    ? d.testsPerformed
+    : ['Contrôle visuel complet', 'Test de compression', 'Inspection interne par endoscopie'];
+
+  return `<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safe(subject)}</title>
+  </head>
+  <body style="margin:0; padding:0; background:#f3f4f6;">
+    <div style="max-width: 780px; margin: 32px auto; padding: 14px; border: 3px solid #2f2f2f; border-radius: 12px; background: #e5e7eb; box-sizing: border-box;">
+      <table role="presentation" style="background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 6px 18px rgba(15,23,42,0.15);" border="0" width="100%" cellspacing="0" cellpadding="0">
+        <tbody>
+        <!-- EN-TÊTE -->
+        <tr>
+          <td style="padding: 18px 26px 12px 26px; background: #ffffff;">
+            <table role="presentation" border="0" width="100%" cellspacing="0" cellpadding="0">
+              <tbody>
+                <tr>
+                  <td align="left" valign="middle">
+                    ${headerLogo ? `<img style="max-width: 210px; height: auto; display: block;" src="${safe(headerLogo)}" alt="${safeCompany}" />` : ''}
+                  </td>
+                  <td style="font-size: 12px; color: #111827;" align="right" valign="middle">
+                    <div style="text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; color: #6b7280; margin-bottom: 4px;">${safe(brandRightTitle)}</div>
+                    <div style="font-size: 13px; color: #111827;">Service devis moteurs<br /><span style="font-weight: bold; color: #e30613;">${safe(phone)}</span></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        <!-- BARRE ACCENT -->
+        <tr>
+          <td style="padding: 0 26px 8px 26px;">
+            <div style="display: inline-block; background: #fee2e2; border-radius: 999px; padding: 4px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: #b91c1c; font-weight: bold;">Devis moteur contrôlé</div>
+          </td>
+        </tr>
+        <!-- TITRE / CONTEXTE -->
+        <tr>
+          <td style="padding: 0 26px 16px 26px; border-bottom: 1px solid #e5e7eb;">
+            <h1 style="margin: 8px 0 6px 0; font-size: 20px; color: #111827;">${vehicle ? `Devis moteur pour votre véhicule ${safe(vehicle)}` : safe(subject)}</h1>
+            ${clientName ? `<p style="margin: 0; font-size: 13px; color: #6b7280;">Client : <strong>${safe(clientName)}</strong></p>` : ''}
+          </td>
+        </tr>
+        <!-- INTRO + INFOS MOTEUR -->
+        <tr>
+          <td style="padding: 18px 26px 10px 26px; font-size: 14px; color: #111827; line-height: 1.6;">
+            ${!hasGreeting && clientName ? `<p style="margin: 0 0 12px 0;">Bonjour ${safe(clientName)},</p>` : ''}
+            ${rawMessage ? `<p style="margin: 0 0 12px 0;">${nl2br(rawMessage)}</p>` : `<p style="margin: 0 0 12px 0;">Suite à votre demande, nous avons identifié le moteur compatible avec votre véhicule.</p>`}
+            ${(engineCode || configuration) ? `
+            <table style="border-collapse: collapse; margin: 0;" border="0" width="100%" cellspacing="0" cellpadding="0">
+              <tbody>
+                ${engineCode ? `<tr><td style="padding: 4px 0; font-size: 14px;"><span style=\"font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.09em;\"> Code moteur </span><br /><strong style=\"font-size: 15px;\">${safe(engineCode)}</strong></td></tr>` : ''}
+                ${configuration ? `<tr><td style="padding: 10px 0 0 0; font-size: 14px;"><span style=\"font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.09em;\"> Configuration </span><br /><strong style=\"font-size: 15px;\">${safe(configuration)}</strong></td></tr>` : ''}
+              </tbody>
+            </table>` : ''}
+          </td>
+        </tr>
+        <!-- BLOC TARIF + TOTAL -->
+        ${(priceStr || shipStr || warranty || totalStr) ? `
+        <tr>
+          <td style="padding: 6px 26px 16px 26px;">
+            <table style="border-radius: 10px; border: 1px solid #e5e7eb; background: #f9fafb;" border="0" width="100%" cellspacing="0" cellpadding="0">
+              <tbody>
+                <tr>
+                  <td style="padding: 10px 16px 4px 16px;" colspan="2"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; font-weight: bold;"> Détail du devis </span></td>
+                </tr>
+                ${priceStr ? `<tr><td style=\"padding: 8px 16px; font-size: 14px; color: #111827;\">Moteur contrôlé</td><td style=\"padding: 8px 16px; font-size: 14px; font-weight: bold; color: #b91c1c;\" align=\"right\">${priceStr}</td></tr>` : ''}
+                ${shipStr ? `<tr><td style=\"padding: 4px 16px; font-size: 14px; color: #111827;\">Livraison assurée</td><td style=\"padding: 4px 16px; font-size: 14px; font-weight: bold; color: #b91c1c;\" align=\"right\">${shipStr}</td></tr>` : ''}
+                ${warranty ? `<tr><td style=\"padding: 4px 16px 10px 16px; font-size: 14px; color: #111827;\">Garantie</td><td style=\"padding: 4px 16px 10px 16px; font-size: 14px; font-weight: bold;\" align=\"right\">${safe(warranty)}</td></tr>` : ''}
+                ${(totalStr) ? `<tr><td style=\"border-top: 1px solid #e5e7eb; padding: 10px 16px 12px 16px;\" colspan=\"2\"><table border=\"0\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\"><tbody><tr><td style=\"font-size: 13px; color: #4b5563;\"><strong>Total TTC (moteur ${shipStr ? '+ livraison' : ''})</strong></td><td style=\"font-size: 18px; font-weight: bold; color: #e30613;\" align=\"right\">${totalStr}</td></tr></tbody></table></td></tr>` : ''}
+              </tbody>
+            </table>
+          </td>
+        </tr>` : ''}
+        <!-- DELAI -->
+        ${d.delivery ? `
+        <tr>
+          <td style="padding: 4px 26px 14px 26px;">
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 4px;">Délai estimé</div>
+            <div style="border-left: 3px solid #e30613; padding-left: 10px; font-size: 14px; color: #111827;">${safe(d.delivery)}</div>
+          </td>
+        </tr>` : ''}
+        <!-- GARANTIE / CONDITIONS -->
+        <tr>
+          <td style="padding: 4px 26px 14px 26px;">
+            <table style="border-radius: 10px; border: 1px solid #e5e7eb;" border="0" width="100%" cellspacing="0" cellpadding="0">
+              <tbody>
+                <tr><td style="padding: 10px 16px 4px 16px;"><span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; font-weight: bold;"> Garantie & conditions </span></td></tr>
+                <tr>
+                  <td style="padding: 4px 16px 12px 16px; font-size: 13px; color: #111827;">
+                    <strong>Garantie 1 an</strong>, sous réserve de :
+                    <ul style="margin: 6px 0 0 18px; padding: 0;">
+                      <li>Montage par un professionnel qualifié</li>
+                      <li>Respect des préconisations constructeur</li>
+                      <li>Utilisation de consommables et pièces compatibles</li>
+                    </ul>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+        <!-- NOTRE MÉTHODE -->
+        <tr>
+          <td style="padding: 4px 26px 16px 26px;">
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 4px;">Notre façon de travailler</div>
+            <p style="margin: 0 0 8px 0; font-size: 14px; color: #111827;">Chaque moteur est physiquement contrôlé avant expédition afin de limiter au maximum les risques pour vous (main-d’œuvre, immobilisation, frais imprévus).</p>
+            <ul style="margin: 0 0 8px 18px; padding: 0; font-size: 14px; color: #111827;">
+              ${tests.map(t => `<li>${safe(t)}</li>`).join('')}
+            </ul>
+            <p style="margin: 0 0 6px 0; font-size: 14px; color: #111827;">En cas de non-conformité constatée lors des tests :</p>
+            <ul style="margin: 0 0 8px 18px; padding: 0; font-size: 14px; color: #111827;">
+              <li>Le moteur n’est pas expédié</li>
+              <li>Une autre unité est proposée si disponible</li>
+              <li>Ou la commande est annulée avec remboursement intégral</li>
+            </ul>
+            ${d.defectObserved ? `<p style=\"margin: 0; font-size: 13px; color: #4b5563;\"><strong>Défaut(s) constaté(s) :</strong> ${nl2br(d.defectObserved)}</p>` : `<p style=\"margin: 0; font-size: 13px; color: #4b5563;\"><strong>Objectif :</strong> fiabilité, transparence, et éviter toute perte de temps ou de main-d’œuvre inutile.</p>`}
+          </td>
+        </tr>
+        <!-- CTA / CONTACT -->
+        <tr>
+          <td style="padding: 20px 26px 10px 26px;">
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #111827;">Pour valider ce devis ou obtenir des précisions, le plus simple est de nous appeler :</p>
+            <a style="display: inline-block; padding: 12px 26px; border-radius: 999px; background: #e30613; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 15px;" href="tel:${safePhoneLink}"> ${safe(phone)} </a>
+            <p style="margin: 12px 0 0 0; font-size: 12px; color: #6b7280;">Vous pouvez également répondre directement à cet email si vous préférez un échange écrit.</p>
+            <p style="margin: 18px 0 4px 0; font-size: 14px; color: #111827;">Cordialement,</p>
+            <p style="margin: 0 0 10px 0; font-size: 13px; color: #4b5563;"><strong>L’équipe ${safeCompany}</strong></p>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: #9ca3af;">+ de 500 moteurs fournis à des garages et particuliers partout en France.</p>
+          </td>
+        </tr>
+        <!-- PIED DE PAGE -->
+        <tr>
+          <td style="background: #000000; color: #d1d5db; text-align: center; padding: 10px 26px; font-size: 11px;">CPF Moteur – ${safeCompany} · SIREN ${safe(siren)}</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+ </html>`;
+};
+
+export default buildReplyEmailHtmlV2;

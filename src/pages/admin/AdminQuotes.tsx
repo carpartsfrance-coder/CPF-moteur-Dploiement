@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useReducer, useRef } from 'react';
+import React, { useMemo, useState, useReducer, useRef, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -65,16 +65,20 @@ const AdminQuotes: React.FC = () => {
   const [attachments, setAttachments] = useState<AttachmentInput[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [price, setPrice] = useState('');
+  const [buyPrice, setBuyPrice] = useState('');
   const [mileageKm, setMileageKm] = useState('');
-  const [delivery, setDelivery] = useState('');
+  const [delivery, setDelivery] = useState('Entre 8 et 12 jours');
   const [reference, setReference] = useState('');
+  const [deliveryCost, setDeliveryCost] = useState('189');
+  const [warranty, setWarranty] = useState('1 an');
+  const [configuration, setConfiguration] = useState('Moteur avec accessoires');
   const [items, setItems] = useState<ItemInput[]>([]);
   const [tests, setTests] = useState({
-    compression: false,
-    endoscopy: false,
-    oilPressure: false,
-    oilAnalysis: false,
-    visualInspection: false,
+    compression: true,
+    endoscopy: true,
+    oilPressure: true,
+    oilAnalysis: true,
+    visualInspection: true,
   });
   const [defectObserved, setDefectObserved] = useState('');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'error' }>({ open: false, message: '', severity: 'success' });
@@ -82,7 +86,47 @@ const AdminQuotes: React.FC = () => {
   const [clientRepliesLoading, setClientRepliesLoading] = useState(false);
 
   // Lire les devis à chaque rendu; 'tick' force un re-render lorsque l'on modifie les données
-  const quotes = getQuotes();
+  const [remoteQuotes, setRemoteQuotes] = useState<QuoteItem[]>([]);
+  useEffect(() => {
+    let aborted = false;
+    (async () => {
+      try {
+        const token = (process as any).env.REACT_APP_BACKEND_TOKEN || '';
+        const prefix = (() => {
+          const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+          if (String(env).trim()) return String(env).trim().replace(/\/$/, '');
+          if (typeof window !== 'undefined') {
+            const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+            return isLocal ? 'http://localhost:3001' : '';
+          }
+          return '';
+        })();
+        const url = `${prefix}/api/admin/quotes`;
+        const headers: Record<string,string> = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(url, { headers, credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = Array.isArray(data?.quotes) ? data.quotes : [];
+        const mapped: QuoteItem[] = list.map((m: any) => ({
+          id: String(m.id || ''),
+          name: String(m.name || ''),
+          email: String(m.email || ''),
+          phone: String(m.phone || ''),
+          vehicleId: String(m.vehicleId || ''),
+          message: String(m.message || ''),
+          createdAt: String(m.createdAt || new Date().toISOString()),
+          channel: 'email',
+          status: 'nouveau',
+          responses: [],
+        }));
+        if (!aborted) setRemoteQuotes(mapped);
+      } catch {}
+    })();
+    return () => { aborted = true; };
+  }, []);
+  const localQuotes = getQuotes();
+  const quotes = remoteQuotes.length ? remoteQuotes : localQuotes;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -100,6 +144,22 @@ const AdminQuotes: React.FC = () => {
     forceRender();
   };
 
+  // Helpers pour calcul auto du prix de vente
+  const parseEuro = (s: string) => {
+    try {
+      const cleaned = String(s).replace(/[^0-9,\.]/g, '').replace(',', '.');
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : NaN;
+    } catch { return NaN; }
+  };
+  const computeSalePrice = (buy: number) => {
+    if (!Number.isFinite(buy) || buy <= 0) return NaN;
+    if (buy <= 700) return buy * 2;
+    if (buy <= 1500) return buy + 500;
+    if (buy <= 3500) return buy * 1.45;
+    return buy * 1.4;
+  };
+
   const handleDelete = (id: string) => {
     deleteQuote(id);
     forceRender();
@@ -113,12 +173,19 @@ const AdminQuotes: React.FC = () => {
   const loadClientReplies = async (id: string) => {
     try {
       setClientRepliesLoading(true);
-      const base = process.env.REACT_APP_BACKEND_URL;
       const token = process.env.REACT_APP_BACKEND_TOKEN;
-      if (!base) { setClientReplies([]); return; }
+      const prefix = (() => {
+        const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+        if (String(env).trim()) return String(env).trim().replace(/\/$/, '');
+        if (typeof window !== 'undefined') {
+          const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+          return isLocal ? 'http://localhost:3001' : '';
+        }
+        return '';
+      })();
       const headers: Record<string,string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${base.replace(/\/$/, '')}/api/replies/${id}`, {
+      const res = await fetch(`${prefix}/api/replies/${id}`, {
         headers,
         credentials: 'include',
       });
@@ -143,18 +210,22 @@ const AdminQuotes: React.FC = () => {
       '',
       'Voici notre proposition personnalisée ci-dessous.',
       '',
-      'N’hésitez pas à revenir vers moi pour confirmer ce devis ou pour toute question complémentaire.',
+      'N’hésitez pas à revenir vers nous pour confirmer ce devis ou pour toute question complémentaire.',
       '',
-      'Bien cordialement Killian,',
+      'Bien cordialement,',
       'CAR PARTS FRANCE',
     ].join('\n'));
     setAttachments([]);
     setPrice('');
+    setBuyPrice('');
     setMileageKm('');
-    setDelivery('');
+    setDelivery('Entre 8 et 12 jours');
     setReference('');
+    setDeliveryCost('189');
+    setWarranty('1 an');
+    setConfiguration('Moteur avec accessoires');
     setItems([]);
-    setTests({ compression: false, endoscopy: false, oilPressure: false, oilAnalysis: false, visualInspection: false });
+    setTests({ compression: true, endoscopy: true, oilPressure: true, oilAnalysis: true, visualInspection: true });
     setDefectObserved('');
     void loadClientReplies(quote.id);
   };
@@ -164,9 +235,13 @@ const AdminQuotes: React.FC = () => {
     setReplyMessage('');
     setAttachments([]);
     setPrice('');
+    setBuyPrice('');
     setMileageKm('');
     setDelivery('');
     setReference('');
+    setDeliveryCost('');
+    setWarranty('');
+    setConfiguration('');
     setItems([]);
     setTests({ compression: false, endoscopy: false, oilPressure: false, oilAnalysis: false, visualInspection: false });
     setDefectObserved('');
@@ -281,6 +356,11 @@ const AdminQuotes: React.FC = () => {
 
   const handleSendReply = async () => {
     if (!replyingQuote) return;
+    // Validation: référence / code moteur obligatoire
+    if (!reference.trim()) {
+      setSnackbar({ open: true, message: 'Veuillez renseigner la Référence / code moteur (obligatoire).', severity: 'error' });
+      return;
+    }
     const response = {
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
       channel: replyChannel,
@@ -289,13 +369,21 @@ const AdminQuotes: React.FC = () => {
     } as const;
     if (replyChannel === 'email') {
       const subject = `Réponse à votre devis - Car Parts France Pro`;
-      const base = process.env.REACT_APP_BACKEND_URL;
       const token = process.env.REACT_APP_BACKEND_TOKEN;
       try {
-        if (base) {
+        const prefix = (() => {
+          const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+          if (String(env).trim()) return String(env).trim().replace(/\/$/, '');
+          if (typeof window !== 'undefined') {
+            const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+            return isLocal ? 'http://localhost:3001' : '';
+          }
+          return '';
+        })();
+        if (true) {
           const headers: Record<string,string> = { 'Content-Type': 'application/json' };
           if (token) headers.Authorization = `Bearer ${token}`;
-          const res = await fetch(`${base.replace(/\/$/, '')}/api/devis/${replyingQuote.id}/reponse`, {
+          const res = await fetch(`${prefix}/api/devis/${replyingQuote.id}/reponse`, {
             method: 'POST',
             headers,
             credentials: 'include',
@@ -312,6 +400,11 @@ const AdminQuotes: React.FC = () => {
                 mileageKm: mileageKm.trim() || undefined,
                 delivery: delivery.trim() || undefined,
                 reference: reference.trim() || undefined,
+                deliveryCost: deliveryCost.trim() || undefined,
+                warranty: warranty.trim() || undefined,
+                configuration: configuration.trim() || undefined,
+                vehicleId: replyingQuote.vehicleId || undefined,
+                engineCode: reference.trim() || undefined,
                 items: items
                   .map((it) => ({
                     product: (it.product || '').trim(),
@@ -557,6 +650,22 @@ const AdminQuotes: React.FC = () => {
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1 }}>Détails de l'offre (facultatif)</Typography>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 1 }}>
                   <TextField
+                    label="Prix d'achat TTC (interne)"
+                    placeholder="ex: 900"
+                    value={buyPrice}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setBuyPrice(v);
+                      const n = parseEuro(v);
+                      const s = computeSalePrice(n);
+                      if (Number.isFinite(s)) {
+                        setPrice(String(Math.round(s)));
+                      }
+                    }}
+                    fullWidth
+                    InputProps={{ endAdornment: <InputAdornment position="end">€</InputAdornment> }}
+                  />
+                  <TextField
                     label="Prix TTC"
                     placeholder="ex: 249.90"
                     value={price}
@@ -579,15 +688,48 @@ const AdminQuotes: React.FC = () => {
                     placeholder="ex: 48h, 3-5 jours"
                     value={delivery}
                     onChange={(e) => setDelivery(e.target.value)}
+                    disabled
                     fullWidth
                   />
                   <TextField
-                    label="Référence"
+                    label="Référence / code moteur"
                     placeholder="ex: CPF-12345"
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
+                    required
+                    helperText={reference.trim() ? '' : 'Obligatoire'}
                     fullWidth
                   />
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+                  <TextField
+                    label="Frais de livraison TTC"
+                    placeholder="ex: 149"
+                    value={deliveryCost}
+                    onChange={(e) => setDeliveryCost(e.target.value)}
+                    fullWidth
+                    InputProps={{ endAdornment: <InputAdornment position="end">€</InputAdornment> }}
+                  />
+                  <TextField
+                    select
+                    label="Garantie"
+                    value={warranty}
+                    onChange={(e) => setWarranty(String(e.target.value))}
+                    fullWidth
+                  >
+                    <MenuItem value="6 mois">6 mois</MenuItem>
+                    <MenuItem value="1 an">1 an</MenuItem>
+                  </TextField>
+                  <TextField
+                    select
+                    label="Configuration"
+                    value={configuration}
+                    onChange={(e) => setConfiguration(String(e.target.value))}
+                    fullWidth
+                  >
+                    <MenuItem value="Moteur avec accessoires">Moteur avec accessoires</MenuItem>
+                    <MenuItem value="Moteur sans accessoires">Moteur sans accessoires</MenuItem>
+                  </TextField>
                 </Stack>
 
                 <Box sx={{ mt: 2 }}>

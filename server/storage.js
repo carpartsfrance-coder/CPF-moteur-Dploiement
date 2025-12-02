@@ -56,3 +56,15 @@ export function getQuoteMeta(quoteId) {
   const all = readAll();
   return (all.__meta && all.__meta[quoteId]) ? all.__meta[quoteId] : null;
 }
+
+export function listQuoteMetas() {
+  const all = readAll();
+  const metas = all.__meta || {};
+  const arr = Object.entries(metas).map(([id, meta]) => ({ id, ...(meta || {}) }));
+  arr.sort((a, b) => {
+    const da = new Date(a.createdAt || a.deliveredAt || 0).getTime();
+    const db = new Date(b.createdAt || b.deliveredAt || 0).getTime();
+    return db - da;
+  });
+  return arr;
+}
