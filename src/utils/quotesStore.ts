@@ -14,8 +14,11 @@ export type QuoteItem = {
   message: string;
   createdAt: string; // ISO
   channel?: 'whatsapp' | 'email' | 'api' | 'unknown';
-  status?: 'nouveau' | 'en_cours' | 'termine';
+  status?: 'nouveau' | 'en_cours' | 'termine' | 'en_attente_client';
   responses?: QuoteResponse[];
+  followUpAt?: string;
+  lastOpenedAt?: string;
+  openCount?: number;
 };
 
 const KEY = 'cpf_quotes_v1';

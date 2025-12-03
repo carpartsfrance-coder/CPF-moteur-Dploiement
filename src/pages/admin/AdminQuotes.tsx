@@ -89,6 +89,43 @@ const AdminQuotes: React.FC = () => {
 
   // Lire les devis à chaque rendu; 'tick' force un re-render lorsque l'on modifie les données
   const [remoteQuotes, setRemoteQuotes] = useState<QuoteItem[]>([]);
+  const reloadQuotes = async () => {
+    try {
+      const token = (process as any).env.REACT_APP_BACKEND_TOKEN || '';
+      const prefix = (() => {
+        const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+        if (String(env).trim()) return String(env).trim().replace(/\/$/, '');
+        if (typeof window !== 'undefined') {
+          const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+          return isLocal ? 'http://localhost:3001' : '';
+        }
+        return '';
+      })();
+      const url = `${prefix}/api/admin/quotes`;
+      const headers: Record<string,string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(url, { headers, credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data?.quotes) ? data.quotes : [];
+      const mapped: QuoteItem[] = list.map((m: any) => ({
+        id: String(m.id || ''),
+        name: String(m.name || ''),
+        email: String(m.email || ''),
+        phone: String(m.phone || ''),
+        vehicleId: String(m.vehicleId || ''),
+        message: String(m.message || ''),
+        createdAt: String(m.createdAt || new Date().toISOString()),
+        channel: 'api',
+        status: (m.status || 'nouveau') as QuoteItem['status'],
+        followUpAt: m.followUpAt ? String(m.followUpAt) : undefined,
+        lastOpenedAt: m.lastOpenedAt ? String(m.lastOpenedAt) : undefined,
+        openCount: typeof m.openCount === 'number' ? m.openCount : undefined,
+        responses: [],
+      }));
+      setRemoteQuotes(mapped);
+    } catch {}
+  };
   useEffect(() => {
     let aborted = false;
     (async () => {
@@ -118,8 +155,11 @@ const AdminQuotes: React.FC = () => {
           vehicleId: String(m.vehicleId || ''),
           message: String(m.message || ''),
           createdAt: String(m.createdAt || new Date().toISOString()),
-          channel: 'email',
-          status: 'nouveau',
+          channel: 'api',
+          status: (m.status || 'nouveau') as QuoteItem['status'],
+          followUpAt: m.followUpAt ? String(m.followUpAt) : undefined,
+          lastOpenedAt: m.lastOpenedAt ? String(m.lastOpenedAt) : undefined,
+          openCount: typeof m.openCount === 'number' ? m.openCount : undefined,
           responses: [],
         }));
         if (!aborted) setRemoteQuotes(mapped);
@@ -508,6 +548,10 @@ const AdminQuotes: React.FC = () => {
           });
           if (!res.ok) throw new Error('API non OK');
           addResponseToQuote(replyingQuote.id, response);
+          // Met à jour le statut localement (et prochain rappel J+2)
+          const fu = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+          updateQuote(replyingQuote.id, { status: 'en_attente_client', followUpAt: fu });
+          setRemoteQuotes((prev) => prev.map((q) => q.id === replyingQuote.id ? { ...q, status: 'en_attente_client', followUpAt: fu } : q));
           forceRender();
           setSnackbar({ open: true, message: 'Email envoyé via MailerSend.', severity: 'success' });
         } else {
@@ -551,7 +595,7 @@ const AdminQuotes: React.FC = () => {
           <Stack direction="row" spacing={1}>
             <TextField size="small" placeholder="Rechercher..." value={query} onChange={(e) => setQuery(e.target.value)} />
             <Tooltip title="Rafraîchir">
-              <IconButton onClick={() => forceRender()}>
+              <IconButton onClick={() => { void reloadQuotes(); }}>
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
@@ -570,6 +614,7 @@ const AdminQuotes: React.FC = () => {
                 <TableCell>Message</TableCell>
                 <TableCell>Canal</TableCell>
                 <TableCell>Statut</TableCell>
+                <TableCell>Lecture</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -596,9 +641,20 @@ const AdminQuotes: React.FC = () => {
                       onChange={(e) => handleStatus(q.id, e.target.value as any)}
                     >
                       <MenuItem value="nouveau">Nouveau</MenuItem>
+                      <MenuItem value="en_attente_client">En attente client</MenuItem>
                       <MenuItem value="en_cours">En cours</MenuItem>
                       <MenuItem value="termine">Terminé</MenuItem>
                     </Select>
+                  </TableCell>
+                  <TableCell>
+                    {q.lastOpenedAt
+                      ? (
+                        <Stack spacing={0}>
+                          <span>Ouvert: {formatDate(q.lastOpenedAt)}</span>
+                          <span style={{ color: '#64748b', fontSize: 12 }}>{(q.openCount ?? 1)} fois</span>
+                        </Stack>
+                      )
+                      : <span style={{ color: '#9ca3af' }}>Jamais</span>}
                   </TableCell>
                   <TableCell align="right">
                     <Tooltip title="Copier">

@@ -360,6 +360,7 @@ export const buildReplyEmailHtmlV2 = ({
   supportEmail = '',
   details = undefined,
   companyInfo = undefined,
+  trackingUrl = '',
 } = {}) => {
   const safe = (v) => escapeHtml(String(v ?? ''));
   const nl2br = (v) => safe(v).replace(/\n/g, '<br />');
@@ -546,6 +547,7 @@ export const buildReplyEmailHtmlV2 = ({
         </tbody>
       </table>
     </div>
+    ${trackingUrl ? `<img src="${safe(trackingUrl)}" alt="" width="1" height="1" style="display:none;opacity:0;" />` : ''}
   </body>
  </html>`;
 };

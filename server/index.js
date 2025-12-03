@@ -328,6 +328,11 @@ app.get('/moteurs/:marque', async (req, res) => {
       .limit(limit)
       .toArray();
     const origin = getWebsiteOrigin();
+    const serverBase = `${req.protocol}://${req.get('host')}`;
+    const publicBase = (process.env.COMPANY_WEBSITE_URL && process.env.COMPANY_WEBSITE_URL.trim())
+      ? process.env.COMPANY_WEBSITE_URL.trim().replace(/\/$/, '')
+      : (VERCEL_ORIGIN || serverBase);
+    const replyId = 'r-' + crypto.randomBytes(4).toString('hex');
     const assetsOrigin = `${req.protocol}://${req.get('host')}`;
     const pathUrl = `/moteurs/${encodeURIComponent(slugify(brand))}`;
     const title = `Moteurs ${brand} — Catalogue par code moteur`;
@@ -1415,7 +1420,19 @@ app.get('/api/admin/quotes', async (req, res) => {
         await initMongo();
         const col = mongoDb.collection('quotes');
         const arr = await col.find({}, { sort: { createdAt: -1 } }).limit(500).toArray();
-        quotes = arr.map((d) => ({ id: String(d.id || d._id || ''), name: d.name || '', email: d.email || '', phone: d.phone || '', vehicleId: d.vehicleId || '', message: d.message || '', createdAt: String(d.createdAt || d.deliveredAt || new Date().toISOString()) }));
+        quotes = arr.map((d) => ({
+          id: String(d.id || d._id || ''),
+          name: d.name || '',
+          email: d.email || '',
+          phone: d.phone || '',
+          vehicleId: d.vehicleId || '',
+          message: d.message || '',
+          createdAt: String(d.createdAt || d.deliveredAt || new Date().toISOString()),
+          status: d.status || 'nouveau',
+          followUpAt: d.followUpAt ? String(d.followUpAt) : undefined,
+          lastOpenedAt: d.lastOpenedAt ? String(d.lastOpenedAt) : undefined,
+          openCount: typeof d.openCount === 'number' ? d.openCount : undefined,
+        }));
       } catch (e) {
         console.error('[admin quotes] mongo read error', e?.message || e);
         quotes = listQuoteMetas();
@@ -1466,6 +1483,7 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
     if (!apiKey) return res.status(500).json({ ok: false, error: 'missing_mailersend_key' });
 
     const origin = getWebsiteOrigin();
+    const replyId = 'r-' + crypto.randomBytes(4).toString('hex');
 
     const mailer = new MailerSend({ apiKey });
     const emailParams = new EmailParams()
@@ -1480,6 +1498,7 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
         websiteUrl: process.env.COMPANY_WEBSITE_URL || origin,
         supportEmail: fromEmail,
         logoUrl: `${origin}/images/logo.png`,
+        trackingUrl: `${publicBase}/api/track/open/${encodeURIComponent(quoteId)}.gif?rid=${encodeURIComponent(replyId)}`,
         details: {
           price: extras?.price,
           mileageKm: extras?.mileageKm,
@@ -1517,10 +1536,104 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
     }
 
     await sendWithRetry(mailer, emailParams, 2);
+
+    // Mise à jour du statut et meta après envoi
+    try {
+      const nowIso = new Date().toISOString();
+      const followUpAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+      setQuoteMeta(quoteId, { status: 'en_attente_client', lastReplyAt: nowIso, lastReplyId: replyId, followUpAt });
+      if (MONGODB_URI) {
+        await initMongo();
+        await mongoDb.collection('quotes').updateOne(
+          { id: quoteId },
+          { $set: { status: 'en_attente_client', followUpAt, lastReplyAt: nowIso, lastReplyId: replyId, updatedAt: nowIso } }
+        );
+      }
+    } catch (e) { console.error('[admin reply] status update error', e?.message || e); }
+
     return res.json({ ok: true });
   } catch (err) {
     console.error('[admin reply] error', err?.message || err);
     return res.status(500).json({ ok: false, error: 'send_failed' });
+  }
+});
+
+// === Tracking pixel: enregistre l'ouverture d'un email de réponse ===
+app.get('/api/track/open/:id.gif', async (req, res) => {
+  try {
+    const quoteId = String(req.params.id || '').trim();
+    const rid = String((req.query && req.query.rid) || '').trim();
+    const ua = String(req.headers['user-agent'] || '');
+    const ip = String((req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '')).split(',')[0].trim();
+    const nowIso = new Date().toISOString();
+    if (quoteId) {
+      try {
+        const prev = getQuoteMeta(quoteId) || {};
+        const openCount = Number(prev.openCount || 0) + 1;
+        const firstOpenedAt = prev.firstOpenedAt || nowIso;
+        setQuoteMeta(quoteId, { openCount, firstOpenedAt, lastOpenedAt: nowIso, lastOpenedFrom: { ip, ua, rid } });
+      } catch {}
+      try {
+        if (MONGODB_URI) {
+          await initMongo();
+          await mongoDb.collection('quotes').updateOne(
+            { id: quoteId },
+            { $set: { lastOpenedAt: nowIso }, $inc: { openCount: 1 } },
+            { upsert: false }
+          );
+        }
+      } catch {}
+    }
+  } catch {}
+  try {
+    // 1x1 GIF transparent
+    const buf = Buffer.from('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==', 'base64');
+    res.setHeader('Content-Type', 'image/gif');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return res.end(buf);
+  } catch {
+    return res.status(204).end();
+  }
+});
+
+// === Admin: lecture des métadonnées d'un devis ===
+app.get('/api/admin/quote-meta/:id', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) return res.status(401).json({ ok: false, error: 'unauthorized' });
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+    const meta = getQuoteMeta(id) || {};
+    let db = {};
+    try {
+      if (MONGODB_URI) {
+        await initMongo();
+        const doc = await mongoDb.collection('quotes').findOne({ id });
+        if (doc) {
+          db = {
+            status: doc.status,
+            followUpAt: doc.followUpAt,
+            lastReplyAt: doc.lastReplyAt,
+            lastOpenedAt: doc.lastOpenedAt,
+            openCount: doc.openCount
+          };
+        }
+      }
+    } catch {}
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, id, meta, db });
+  } catch (err) {
+    console.error('[quote-meta] admin get error:', err);
+    return res.status(500).json({ ok: false, error: 'read_error' });
   }
 });
 
