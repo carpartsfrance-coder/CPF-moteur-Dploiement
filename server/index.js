@@ -1484,6 +1484,10 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
 
     const origin = getWebsiteOrigin();
     const replyId = 'r-' + crypto.randomBytes(4).toString('hex');
+    const serverBase = `${req.protocol}://${req.get('host')}`;
+    const publicBase = (process.env.COMPANY_WEBSITE_URL && process.env.COMPANY_WEBSITE_URL.trim())
+      ? process.env.COMPANY_WEBSITE_URL.trim().replace(/\/$/, '')
+      : (VERCEL_ORIGIN || serverBase);
 
     const mailer = new MailerSend({ apiKey });
     const emailParams = new EmailParams()
