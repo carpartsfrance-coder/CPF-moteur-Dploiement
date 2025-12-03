@@ -1542,18 +1542,27 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
     await sendWithRetry(mailer, emailParams, 2);
 
     // Mise à jour du statut et meta après envoi
+    const nowIso = new Date().toISOString();
+    const followUpAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+    // 1) Mise à jour MongoDB si dispo (prod conseillé)
     try {
-      const nowIso = new Date().toISOString();
-      const followUpAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
-      setQuoteMeta(quoteId, { status: 'en_attente_client', lastReplyAt: nowIso, lastReplyId: replyId, followUpAt });
       if (MONGODB_URI) {
         await initMongo();
         await mongoDb.collection('quotes').updateOne(
           { id: quoteId },
-          { $set: { status: 'en_attente_client', followUpAt, lastReplyAt: nowIso, lastReplyId: replyId, updatedAt: nowIso } }
+          { $set: { status: 'en_attente_client', followUpAt, lastReplyAt: nowIso, lastReplyId: replyId, updatedAt: nowIso } },
+          { upsert: true }
         );
       }
-    } catch (e) { console.error('[admin reply] status update error', e?.message || e); }
+    } catch (e) {
+      console.error('[admin reply] mongo status update error', e?.message || e);
+    }
+    // 2) Écriture locale best-effort (échoue en FS read-only sur Vercel)
+    try {
+      setQuoteMeta(quoteId, { status: 'en_attente_client', lastReplyAt: nowIso, lastReplyId: replyId, followUpAt });
+    } catch (e) {
+      console.error('[admin reply] local meta write error', e?.message || e);
+    }
 
     return res.json({ ok: true });
   } catch (err) {
