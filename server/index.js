@@ -1448,6 +1448,55 @@ app.get('/api/admin/quotes', async (req, res) => {
   }
 });
 
+// === Admin: met à jour le statut d'un devis ===
+app.patch('/api/admin/quotes/:id/status', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) return res.status(401).json({ ok: false, error: 'unauthorized' });
+    const id = String(req.params.id || '').trim();
+    const status = String(req.body?.status || '').trim();
+    if (!id || !status) return res.status(400).json({ ok: false, error: 'missing_params' });
+    const allowed = new Set(['nouveau','en_attente_client','en_cours','termine']);
+    if (!allowed.has(status)) return res.status(400).json({ ok: false, error: 'invalid_status' });
+    const nowIso = new Date().toISOString();
+    let persisted = false;
+    if (MONGODB_URI) {
+      try {
+        await initMongo();
+        const r = await mongoDb.collection('quotes').updateOne(
+          { id },
+          { $set: { status, updatedAt: nowIso } },
+          { upsert: true }
+        );
+        if (r && (r.modifiedCount > 0 || r.upsertedCount > 0)) persisted = true;
+      } catch (e) {
+        console.error('[admin status] mongo update error', e?.message || e);
+      }
+    }
+    if (!persisted) {
+      try {
+        setQuoteMeta(id, { status });
+        persisted = true;
+      } catch (e) {
+        console.error('[admin status] local meta write error', e?.message || e);
+      }
+    }
+    if (!persisted) return res.status(500).json({ ok: false, error: 'persist_failed' });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, id, status, updatedAt: nowIso });
+  } catch (err) {
+    console.error('[admin status] error', err?.message || err);
+    return res.status(500).json({ ok: false, error: 'server_error' });
+  }
+});
+
 // === Admin: envoi d'une réponse au client (email via MailerSend) ===
 app.post('/api/devis/:id/reponse', async (req, res) => {
   try {

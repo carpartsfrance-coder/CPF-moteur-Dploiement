@@ -181,9 +181,37 @@ const AdminQuotes: React.FC = () => {
     );
   }, [quotes, query]);
 
-  const handleStatus = (id: string, status: QuoteItem['status']) => {
-    updateQuote(id, { status });
-    forceRender();
+  const handleStatus = async (id: string, status: QuoteItem['status']) => {
+    try {
+      // Optimiste: met à jour l'état local et remote immédiatement
+      updateQuote(id, { status });
+      setRemoteQuotes((prev) => prev.map((q) => q.id === id ? { ...q, status } : q));
+      forceRender();
+
+      const token = (process as any).env.REACT_APP_BACKEND_TOKEN || '';
+      const prefix = (() => {
+        const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+        if (String(env).trim()) return String(env).trim().replace(/\/$/, '');
+        if (typeof window !== 'undefined') {
+          const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+          return isLocal ? 'http://localhost:3001' : '';
+        }
+        return '';
+      })();
+      const headers: Record<string,string> = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${prefix}/api/admin/quotes/${id}/status`, {
+        method: 'PATCH',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error('HTTP');
+      // Option: recharger depuis le serveur pour être sûr
+      // await reloadQuotes();
+    } catch (e) {
+      setSnackbar({ open: true, message: 'Échec de mise à jour du statut.', severity: 'error' });
+    }
   };
 
   // Helpers pour calcul auto du prix de vente
