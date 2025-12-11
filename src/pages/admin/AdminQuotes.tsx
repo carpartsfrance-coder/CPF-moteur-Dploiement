@@ -5,6 +5,7 @@ import {
   Paper,
   Typography,
   Table,
+  TableContainer,
   TableHead,
   TableBody,
   TableRow,
@@ -631,24 +632,54 @@ const AdminQuotes: React.FC = () => {
           </Stack>
         </Stack>
 
-        <Paper elevation={4} sx={{ p: 2, borderRadius: 3 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Client</TableCell>
-                <TableCell>Contact</TableCell>
-                <TableCell>Véhicule</TableCell>
-                <TableCell>Message</TableCell>
-                <TableCell>Canal</TableCell>
-                <TableCell>Statut</TableCell>
-                <TableCell>Lecture</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        <Paper elevation={4} sx={{ p: 0, borderRadius: 3, overflow: 'hidden' }}>
+          <TableContainer sx={{ maxHeight: { xs: 'calc(100vh - 260px)', md: '70vh' }, overflowX: 'auto' }}>
+            <Table size="small" stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Client</TableCell>
+                  <TableCell>Contact</TableCell>
+                  <TableCell>Véhicule</TableCell>
+                  <TableCell>Message</TableCell>
+                  <TableCell>Canal</TableCell>
+                  <TableCell
+                    sx={{
+                      position: 'sticky',
+                      right: { xs: 160, md: 200 },
+                      zIndex: 3,
+                      backgroundColor: (theme) => theme.palette.background.paper,
+                      whiteSpace: 'nowrap',
+                      minWidth: { xs: 160, md: 200 },
+                      width: { xs: 160, md: 200 },
+                      maxWidth: { xs: 160, md: 200 },
+                      boxShadow: 'inset 6px 0 6px -6px rgba(15,23,42,0.18)',
+                    }}
+                  >
+                    Statut
+                  </TableCell>
+                  <TableCell>Lecture</TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{
+                      position: 'sticky',
+                      right: 0,
+                      zIndex: 3,
+                      backgroundColor: (theme) => theme.palette.background.paper,
+                      whiteSpace: 'nowrap',
+                      minWidth: { xs: 160, md: 200 },
+                      width: { xs: 160, md: 200 },
+                      maxWidth: { xs: 160, md: 200 },
+                      boxShadow: 'inset 6px 0 6px -6px rgba(15,23,42,0.2)',
+                    }}
+                  >
+                    Actions
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
               {filtered.map((q) => (
-                <TableRow key={q.id} hover>
+                <TableRow key={q.id} hover sx={{ '& td': { verticalAlign: 'top' } }}>
                   <TableCell>{formatDate(q.createdAt)}</TableCell>
                   <TableCell>{q.name}</TableCell>
                   <TableCell>
@@ -658,11 +689,21 @@ const AdminQuotes: React.FC = () => {
                     </Stack>
                   </TableCell>
                   <TableCell>{q.vehicleId}</TableCell>
-                  <TableCell sx={{ maxWidth: 360, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{q.message}</TableCell>
+                  <TableCell sx={{ maxWidth: { xs: 240, sm: 360 }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{q.message}</TableCell>
                   <TableCell>
                     <Chip size="small" label={q.channel || 'n/a'} color={q.channel === 'api' ? 'success' : q.channel === 'whatsapp' ? 'primary' : q.channel === 'email' ? 'secondary' : 'default'} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell
+                    sx={{
+                      position: 'sticky',
+                      right: { xs: 130, md: 180 },
+                      zIndex: 2,
+                      backgroundColor: (theme) => theme.palette.background.paper,
+                      whiteSpace: 'nowrap',
+                      minWidth: { xs: 140, md: 160 },
+                      boxShadow: 'inset 6px 0 6px -6px rgba(15,23,42,0.12)',
+                    }}
+                  >
                     <Select
                       size="small"
                       value={q.status || 'nouveau'}
@@ -684,23 +725,35 @@ const AdminQuotes: React.FC = () => {
                       )
                       : <span style={{ color: '#9ca3af' }}>Jamais</span>}
                   </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Copier">
-                      <IconButton onClick={() => handleCopy(q)}>
-                        <ContentCopyIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Répondre">
-                      <IconButton color="primary" onClick={() => openReplyDialog(q)}>
-                        <ReplyIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Supprimer">
-                      <IconButton color="error" onClick={() => handleDelete(q.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
-                 </TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{
+                      position: 'sticky',
+                      right: 0,
+                      backgroundColor: (theme) => theme.palette.background.paper,
+                      whiteSpace: 'nowrap',
+                      zIndex: 2,
+                      boxShadow: 'inset 6px 0 6px -6px rgba(15,23,42,0.15)',
+                    }}
+                  >
+                    <Stack direction="row" spacing={0.5} justifyContent="flex-end" flexWrap="wrap">
+                      <Tooltip title="Copier">
+                        <IconButton size="small" onClick={() => handleCopy(q)}>
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Répondre">
+                        <IconButton size="small" color="primary" onClick={() => openReplyDialog(q)}>
+                          <ReplyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Supprimer">
+                        <IconButton size="small" color="error" onClick={() => handleDelete(q.id)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
                 </TableRow>
               ))}
               {filtered.length === 0 && (
@@ -710,8 +763,9 @@ const AdminQuotes: React.FC = () => {
                   </TableCell>
                 </TableRow>
               )}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Paper>
       </Container>
 

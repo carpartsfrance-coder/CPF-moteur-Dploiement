@@ -27,6 +27,7 @@ import TestsMoteursPage from './pages/TestsMoteursPage';
 
 function App() {
   const location = useLocation();
+  const isAdmin = location.pathname.startsWith('/admin');
   const backendBase = (process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
   useEffect(() => {
@@ -121,7 +122,7 @@ function App() {
         </Routes>
       </Box>
       <Footer />
-      <FloatingQuoteButton />
+      {!isAdmin && <FloatingQuoteButton />}
     </Box>
   );
 }
