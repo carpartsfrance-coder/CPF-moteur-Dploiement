@@ -3,6 +3,32 @@ export type QuoteResponse = {
   channel: 'whatsapp' | 'email';
   message: string;
   createdAt: string;
+  extras?: {
+    price?: string;
+    mileageKm?: string;
+    delivery?: string;
+    deliveryCost?: string;
+    reference?: string;
+    warranty?: string;
+    configuration?: string;
+    vehicleId?: string;
+    engineCode?: string;
+    items?: {
+      product?: string;
+      reference?: string;
+      price?: string;
+      warranty?: string;
+      availability?: string;
+    }[];
+    testsPerformed?: string[];
+    defectObserved?: string;
+  };
+  attachments?: {
+    filename: string;
+    type?: string;
+    size?: number;
+    content?: string;
+  }[];
 };
 
 export type QuoteItem = {

@@ -39,7 +39,7 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CloseIcon from '@mui/icons-material/Close';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import AddIcon from '@mui/icons-material/Add';
-import { getQuotes, updateQuote, deleteQuote, QuoteItem, saveQuotes, addResponseToQuote } from '../../utils/quotesStore';
+import { getQuotes, updateQuote, deleteQuote, QuoteItem, QuoteResponse, saveQuotes, addResponseToQuote } from '../../utils/quotesStore';
 
 type ReplyChannel = 'email' | 'whatsapp';
 
@@ -85,6 +85,7 @@ const AdminQuotes: React.FC = () => {
   });
   const [defectObserved, setDefectObserved] = useState('');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'info' | 'error' }>({ open: false, message: '', severity: 'success' });
+  const [adminResponses, setAdminResponses] = useState<QuoteResponse[]>([]);
   const [clientReplies, setClientReplies] = useState<ClientReply[]>([]);
   const [clientRepliesLoading, setClientRepliesLoading] = useState(false);
 
@@ -289,16 +290,37 @@ const AdminQuotes: React.FC = () => {
       })();
       const headers: Record<string,string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${prefix}/api/replies/${id}`, {
-        headers,
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('HTTP');
-      const data = await res.json();
-      const list = Array.isArray(data?.replies) ? (data.replies as ClientReply[]) : [];
-      setClientReplies(list);
-    } catch {
-      setClientReplies([]);
+
+      // Réponses admin (MongoDB)
+      try {
+        const resAdmin = await fetch(`${prefix}/api/admin/quote-responses/${id}`, {
+          headers,
+          credentials: 'include',
+        });
+        if (resAdmin.ok) {
+          const data = await resAdmin.json();
+          const list = Array.isArray(data?.responses) ? (data.responses as QuoteResponse[]) : [];
+          setAdminResponses(list);
+        } else {
+          setAdminResponses([]);
+        }
+      } catch {
+        setAdminResponses([]);
+      }
+
+      // Réponses client (fichier JSON)
+      try {
+        const res = await fetch(`${prefix}/api/replies/${id}`, {
+          headers,
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('HTTP');
+        const data = await res.json();
+        const list = Array.isArray(data?.replies) ? (data.replies as ClientReply[]) : [];
+        setClientReplies(list);
+      } catch {
+        setClientReplies([]);
+      }
     } finally {
       setClientRepliesLoading(false);
     }
@@ -333,6 +355,7 @@ const AdminQuotes: React.FC = () => {
     setItems([]);
     setTests({ compression: true, endoscopy: true, oilPressure: true, oilAnalysis: true, visualInspection: true });
     setDefectObserved('');
+    setAdminResponses([]);
     try {
       const yr = extractYearFromText(`${quote.vehicleId || ''} ${quote.message || ''}`);
       if (Number.isFinite(yr)) {
@@ -511,12 +534,47 @@ const AdminQuotes: React.FC = () => {
       setSnackbar({ open: true, message: 'Veuillez renseigner la Référence / code moteur (obligatoire).', severity: 'error' });
       return;
     }
-    const response = {
+    const nowIso = new Date().toISOString();
+    const response: QuoteResponse = {
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2),
-      channel: replyChannel,
+      channel: replyChannel === 'email' ? 'email' : 'whatsapp',
       message: replyMessage,
-      createdAt: new Date().toISOString(),
-    } as const;
+      createdAt: nowIso,
+      extras: {
+        price: price.trim() || undefined,
+        mileageKm: mileageKm.trim() || undefined,
+        delivery: delivery.trim() || undefined,
+        reference: reference.trim() || undefined,
+        deliveryCost: deliveryCost.trim() || undefined,
+        warranty: warranty.trim() || undefined,
+        configuration: configuration.trim() || undefined,
+        vehicleId: replyingQuote.vehicleId || undefined,
+        engineCode: reference.trim() || undefined,
+        items: items
+          .map((it) => ({
+            product: (it.product || '').trim(),
+            reference: (it.reference || '').trim(),
+            price: (it.price || '').trim() || undefined,
+            warranty: (it.warranty || '').trim() || undefined,
+            availability: (it.availability || '').trim() || undefined,
+          }))
+          .filter((it) => it.product || it.reference),
+        testsPerformed: [
+          tests.compression ? 'Compression' : null,
+          tests.endoscopy ? 'Endoscopie' : null,
+          tests.oilPressure ? "Test pression d'huile" : null,
+          tests.oilAnalysis ? "Analyse d'huile" : null,
+          tests.visualInspection ? 'Inspection visuelle' : null,
+        ].filter(Boolean) as string[],
+        defectObserved: defectObserved.trim() || undefined,
+      },
+      attachments: attachments.map(a => ({
+        filename: a.filename,
+        type: a.type,
+        size: a.size,
+        content: a.content,
+      })),
+    };
     if (replyChannel === 'email') {
       const subject = `Réponse à votre devis - Car Parts France Pro`;
       const token = process.env.REACT_APP_BACKEND_TOKEN;
@@ -545,38 +603,12 @@ const AdminQuotes: React.FC = () => {
               toName: replyingQuote.name,
               subject,
               attachments: attachments.map(a => ({ filename: a.filename, content: a.content, type: a.type })),
-              extras: {
-                price: price.trim() || undefined,
-                mileageKm: mileageKm.trim() || undefined,
-                delivery: delivery.trim() || undefined,
-                reference: reference.trim() || undefined,
-                deliveryCost: deliveryCost.trim() || undefined,
-                warranty: warranty.trim() || undefined,
-                configuration: configuration.trim() || undefined,
-                vehicleId: replyingQuote.vehicleId || undefined,
-                engineCode: reference.trim() || undefined,
-                items: items
-                  .map((it) => ({
-                    product: (it.product || '').trim(),
-                    reference: (it.reference || '').trim(),
-                    price: (it.price || '').trim() || undefined,
-                    warranty: (it.warranty || '').trim() || undefined,
-                    availability: (it.availability || '').trim() || undefined,
-                  }))
-                  .filter((it) => it.product || it.reference),
-                testsPerformed: [
-                  tests.compression ? 'Compression' : null,
-                  tests.endoscopy ? 'Endoscopie' : null,
-                  tests.oilPressure ? "Test pression d'huile" : null,
-                  tests.oilAnalysis ? "Analyse d'huile" : null,
-                  tests.visualInspection ? 'Inspection visuelle' : null,
-                ].filter(Boolean),
-                defectObserved: defectObserved.trim() || undefined,
-              },
+              extras: response.extras,
             }),
           });
           if (!res.ok) throw new Error('API non OK');
           addResponseToQuote(replyingQuote.id, response);
+          setAdminResponses((prev) => [...prev, response]);
           // Met à jour le statut localement (et prochain rappel J+2)
           const fu = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
           updateQuote(replyingQuote.id, { status: 'en_attente_client', followUpAt: fu });
@@ -600,6 +632,7 @@ const AdminQuotes: React.FC = () => {
       const url = `https://wa.me/${waNumber}?text=${encodeURIComponent(replyMessage)}`;
       window.open(url, '_blank');
       addResponseToQuote(replyingQuote.id, response);
+      setAdminResponses((prev) => [...prev, response]);
       forceRender();
       setSnackbar({ open: true, message: 'Ouverture WhatsApp.', severity: 'success' });
     }
@@ -1059,7 +1092,7 @@ const AdminQuotes: React.FC = () => {
             <Box sx={{ mt: 3 }}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 600, mr: 1 }}>Historique des réponses</Typography>
-                <Tooltip title="Rafraîchir les réponses client">
+                <Tooltip title="Rafraîchir l'historique">
                   <span>
                     <IconButton size="small" onClick={() => replyingQuote && loadClientReplies(replyingQuote.id)} disabled={clientRepliesLoading}>
                       <RefreshIcon fontSize="small" />
@@ -1069,7 +1102,35 @@ const AdminQuotes: React.FC = () => {
                 {clientRepliesLoading && <Typography variant="caption" color="text.secondary">Chargement…</Typography>}
               </Stack>
               {(() => {
-                const sent = (replyingQuote.responses || []).map((r) => ({ id: r.id, channel: r.channel as any, message: r.message, createdAt: r.createdAt }));
+                const src = adminResponses.length ? adminResponses : (replyingQuote.responses || []);
+                const sent = src.map((r) => {
+                  const lines: string[] = [];
+                  const e = r.extras || {};
+                  if (e.price) lines.push(`Prix TTC proposé : ${e.price}`);
+                  if (e.mileageKm) lines.push(`Kilométrage : ${e.mileageKm} km`);
+                  if (e.warranty) lines.push(`Garantie : ${e.warranty}`);
+                  if (e.delivery) lines.push(`Délai de livraison : ${e.delivery}`);
+                  if (e.deliveryCost) lines.push(`Frais de port : ${e.deliveryCost} €`);
+                  if (e.configuration) lines.push(`Configuration : ${e.configuration}`);
+                  if (Array.isArray(e.items) && e.items.length) {
+                    lines.push('Articles proposés :');
+                    for (const it of e.items) {
+                      const parts = [it.product, it.reference, it.price ? `${it.price} €` : undefined, it.warranty].filter(Boolean);
+                      if (parts.length) lines.push(` • ${parts.join(' / ')}`);
+                    }
+                  }
+                  if (Array.isArray(e.testsPerformed) && e.testsPerformed.length) {
+                    lines.push(`Tests réalisés : ${e.testsPerformed.join(', ')}`);
+                  }
+                  if (e.defectObserved) {
+                    lines.push(`Défaut constaté : ${e.defectObserved}`);
+                  }
+                  if (Array.isArray(r.attachments) && r.attachments.length) {
+                    lines.push(`Pièces jointes : ${r.attachments.map(a => a.filename).join(', ')}`);
+                  }
+                  const fullMessage = lines.length ? [lines.join('\n'), '', r.message].join('\n') : r.message;
+                  return { id: r.id, channel: r.channel as any, message: fullMessage, createdAt: r.createdAt, attachments: r.attachments || [] } as any;
+                });
                 const received = clientReplies.map((c) => ({ id: c.id, channel: 'client' as const, message: `${c.fromName} <${c.fromEmail}>\n\n${c.message}`, createdAt: c.createdAt }));
                 const merged = [...sent, ...received].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
                 return merged.length ? (
@@ -1081,6 +1142,40 @@ const AdminQuotes: React.FC = () => {
                           <Typography variant="caption" color="text.secondary">{formatDate(res.createdAt)}</Typography>
                         </Stack>
                         <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 1 }}>{res.message}</Typography>
+                        {Array.isArray((res as any).attachments) && (res as any).attachments.some((a: any) => a && typeof a.content === 'string' && a.content.startsWith('data:image')) && (
+                          <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+                            {(res as any).attachments.map((a: any, idx: number) => {
+                              const src = typeof a.content === 'string' ? a.content : '';
+                              const t = typeof a.type === 'string' ? a.type : '';
+                              const isImage = src.startsWith('data:image') || t.startsWith('image/');
+                              if (!src || !isImage) return null;
+                              return (
+                                <Box
+                                  key={idx}
+                                  component="a"
+                                  href={src}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  sx={{
+                                    display: 'inline-block',
+                                    mr: 1,
+                                    mb: 1,
+                                    borderRadius: 1,
+                                    border: '1px solid #eee',
+                                    overflow: 'hidden',
+                                  }}
+                                >
+                                  <Box
+                                    component="img"
+                                    src={src}
+                                    alt={a.filename || `Pièce jointe ${idx + 1}`}
+                                    sx={{ width: 80, height: 80, objectFit: 'cover', display: 'block' }}
+                                  />
+                                </Box>
+                              );
+                            })}
+                          </Stack>
+                        )}
                       </Paper>
                     ))}
                   </Stack>

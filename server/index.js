@@ -1590,25 +1590,68 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
 
     await sendWithRetry(mailer, emailParams, 2);
 
-    // Mise à jour du statut et meta après envoi
+    // Mise à jour du statut, meta et historique après envoi
     const nowIso = new Date().toISOString();
     const followUpAt = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Construction de l'objet de réponse à persister (sans payload base64 des pièces jointes)
+    const replyDoc = {
+      id: replyId,
+      channel,
+      message,
+      createdAt: nowIso,
+      extras: {
+        price: extras?.price,
+        mileageKm: extras?.mileageKm,
+        delivery: extras?.delivery,
+        deliveryCost: extras?.deliveryCost,
+        reference: extras?.reference || quoteId,
+        warranty: extras?.warranty,
+        configuration: extras?.configuration,
+        vehicleId: extras?.vehicleId,
+        engineCode: extras?.engineCode,
+        items: Array.isArray(extras?.items) ? extras.items : [],
+        testsPerformed: Array.isArray(extras?.testsPerformed) ? extras.testsPerformed : [],
+        defectObserved: extras?.defectObserved,
+      },
+      attachments: attachmentsIn.map((a) => ({
+        filename: String(a?.filename || 'piece-jointe'),
+        type: String(a?.type || 'application/octet-stream'),
+        size: typeof a?.size === 'number' ? a.size : undefined,
+        content: typeof a?.content === 'string' ? a.content : undefined,
+      })),
+    };
+
     // 1) Mise à jour MongoDB si dispo (prod conseillé)
     try {
       if (MONGODB_URI) {
         await initMongo();
         await mongoDb.collection('quotes').updateOne(
           { id: quoteId },
-          { $set: { status: 'en_attente_client', followUpAt, lastReplyAt: nowIso, lastReplyId: replyId, updatedAt: nowIso } },
+          {
+            $set: {
+              status: 'en_attente_client',
+              followUpAt,
+              lastReplyAt: nowIso,
+              lastReplyId: replyId,
+              updatedAt: nowIso,
+            },
+            $push: { responses: replyDoc },
+          },
           { upsert: true }
         );
       }
     } catch (e) {
-      console.error('[admin reply] mongo status update error', e?.message || e);
+      console.error('[admin reply] mongo status/update error', e?.message || e);
     }
     // 2) Écriture locale best-effort (échoue en FS read-only sur Vercel)
     try {
-      setQuoteMeta(quoteId, { status: 'en_attente_client', lastReplyAt: nowIso, lastReplyId: replyId, followUpAt });
+      setQuoteMeta(quoteId, {
+        status: 'en_attente_client',
+        lastReplyAt: nowIso,
+        lastReplyId: replyId,
+        followUpAt,
+      });
     } catch (e) {
       console.error('[admin reply] local meta write error', e?.message || e);
     }
@@ -1620,7 +1663,53 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
   }
 });
 
-// === Tracking pixel: enregistre l'ouverture d'un email de réponse ===
+app.get('/api/replies/:id', async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+    const replies = getReplies(id);
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, replies });
+  } catch (err) {
+    console.error('[replies get] error', err);
+    return res.status(500).json({ ok: false, error: 'read_error' });
+  }
+});
+
+app.get('/api/admin/quote-responses/:id', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) return res.status(401).json({ ok: false, error: 'unauthorized' });
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+
+    let responses = [];
+    try {
+      if (MONGODB_URI) {
+        await initMongo();
+        const doc = await mongoDb.collection('quotes').findOne({ id });
+        if (doc && Array.isArray(doc.responses)) {
+          responses = doc.responses;
+        }
+      }
+    } catch (e) {
+      console.error('[quote-responses] mongo read error', e?.message || e);
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, id, responses });
+  } catch (err) {
+    console.error('[quote-responses] admin get error:', err);
+    return res.status(500).json({ ok: false, error: 'read_error' });
+  }
+});
+
 app.get('/api/track/open/:id.gif', async (req, res) => {
   try {
     const quoteId = String(req.params.id || '').trim();
@@ -1657,70 +1746,6 @@ app.get('/api/track/open/:id.gif', async (req, res) => {
     return res.end(buf);
   } catch {
     return res.status(204).end();
-  }
-});
-
-// === Admin: lecture des métadonnées d'un devis ===
-app.get('/api/admin/quote-meta/:id', async (req, res) => {
-  try {
-    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
-    const AUTH = String(req.headers?.authorization || '');
-    const APIK = String(req.headers?.['x-api-key'] || '');
-    const host = String(req.headers?.host || '');
-    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
-    const remote = String((req.socket && req.socket.remoteAddress) || '');
-    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
-    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
-    if (!ok) return res.status(401).json({ ok: false, error: 'unauthorized' });
-    const id = String(req.params.id || '').trim();
-    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
-    const meta = getQuoteMeta(id) || {};
-    let db = {};
-    try {
-      if (MONGODB_URI) {
-        await initMongo();
-        const doc = await mongoDb.collection('quotes').findOne({ id });
-        if (doc) {
-          db = {
-            status: doc.status,
-            followUpAt: doc.followUpAt,
-            lastReplyAt: doc.lastReplyAt,
-            lastOpenedAt: doc.lastOpenedAt,
-            openCount: doc.openCount
-          };
-        }
-      }
-    } catch {}
-    res.setHeader('Cache-Control', 'no-store');
-    return res.json({ ok: true, id, meta, db });
-  } catch (err) {
-    console.error('[quote-meta] admin get error:', err);
-    return res.status(500).json({ ok: false, error: 'read_error' });
-  }
-});
-
-// === Admin: récupère les réponses client enregistrées pour un devis donné ===
-app.get('/api/replies/:id', async (req, res) => {
-  try {
-    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
-    const AUTH = String(req.headers?.authorization || '');
-    const APIK = String(req.headers?.['x-api-key'] || '');
-    const host = String(req.headers?.host || '');
-    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
-    const remote = String((req.socket && req.socket.remoteAddress) || '');
-    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
-    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
-    if (!ok) {
-      return res.status(401).json({ ok: false, error: 'unauthorized' });
-    }
-    const id = String(req.params.id || '').trim();
-    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
-    const replies = getReplies(id);
-    res.setHeader('Cache-Control', 'no-store');
-    return res.json({ ok: true, replies });
-  } catch (err) {
-    console.error('[replies get] error', err);
-    return res.status(500).json({ ok: false, error: 'read_error' });
   }
 });
 
