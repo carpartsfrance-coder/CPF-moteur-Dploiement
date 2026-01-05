@@ -91,6 +91,7 @@ const AdminQuotes: React.FC = () => {
 
   // Lire les devis à chaque rendu; 'tick' force un re-render lorsque l'on modifie les données
   const [remoteQuotes, setRemoteQuotes] = useState<QuoteItem[]>([]);
+  const isLocalHost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
   const reloadQuotes = async () => {
     try {
       const token = (process as any).env.REACT_APP_BACKEND_TOKEN || '';
@@ -169,8 +170,8 @@ const AdminQuotes: React.FC = () => {
     })();
     return () => { aborted = true; };
   }, []);
-  const localQuotes = getQuotes();
-  const quotes = remoteQuotes.length ? remoteQuotes : localQuotes;
+  const localQuotes = isLocalHost ? getQuotes() : [];
+  const quotes = (remoteQuotes.length || !isLocalHost) ? remoteQuotes : localQuotes;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -653,7 +654,7 @@ const AdminQuotes: React.FC = () => {
     <Box sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
       <Container maxWidth="lg">
         <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2} sx={{ mb: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>Devis reçus (local)</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>Devis reçus</Typography>
           <Stack direction="row" spacing={1}>
             <TextField size="small" placeholder="Rechercher..." value={query} onChange={(e) => setQuery(e.target.value)} />
             <Tooltip title="Rafraîchir">
