@@ -202,11 +202,9 @@ const QuoteRequestPage: React.FC = () => {
                       }
                     }
 
-                    // Tentative 2: endpoint interne (Vercel Functions)
+                    // Tentative 2: backend interne (même serveur que l'admin)
                     try {
                       const prefix = (() => {
-                        const env = process.env.REACT_APP_BACKEND_URL || '';
-                        if (env.trim()) return env.trim().replace(/\/$/, '');
                         if (typeof window !== 'undefined') {
                           const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
                           return isLocal ? 'http://localhost:3001' : '';
