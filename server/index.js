@@ -115,6 +115,64 @@ app.use(async (req, res, next) => {
       await initMongo();
       const red = await mongoDb.collection('redirects').findOne({ from: rawPath });
 
+// === Admin: diagnostic stockage (MongoDB vs fichier) ===
+app.get('/api/admin/storage-info', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const authorized = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!authorized) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+
+    const info = {
+      storage: 'file',
+      mongo: {
+        enabled: Boolean(MONGODB_URI),
+        connected: false,
+        count: null,
+        error: null,
+      },
+      file: {
+        count: null,
+      },
+    };
+
+    if (MONGODB_URI) {
+      try {
+        await initMongo();
+        const col = mongoDb.collection('quotes');
+        const mongoCount = await col.estimatedDocumentCount();
+        info.storage = 'mongo';
+        info.mongo.connected = true;
+        info.mongo.count = mongoCount;
+      } catch (err) {
+        info.mongo.error = err?.message || String(err);
+      }
+    }
+
+    if (!MONGODB_URI || info.mongo.error) {
+      try {
+        const metas = listQuoteMetas();
+        info.file.count = metas.length;
+      } catch (err) {
+        info.file.count = null;
+      }
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, info });
+  } catch (err) {
+    console.error('[admin storage-info] error', err?.message || err);
+    return res.status(500).json({ ok: false, error: 'diagnostic_failed' });
+  }
+});
+
 // === Admin: Cloudflare Images (upload direct, liste, suppression, renommage) ===
 app.post('/api/admin/images/direct-upload', async (req, res) => {
   try {

@@ -98,6 +98,13 @@ const AdminQuotes: React.FC = () => {
 
   // Lire les devis à chaque rendu; 'tick' force un re-render lorsque l'on modifie les données
   const [remoteQuotes, setRemoteQuotes] = useState<QuoteItem[]>([]);
+  type StorageInfo = {
+    storage: 'mongo' | 'file';
+    mongo: { enabled: boolean; connected: boolean; count: number | null; error: string | null };
+    file: { count: number | null };
+  };
+  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
+  const [storageLoading, setStorageLoading] = useState(false);
   const isLocalHost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
   const reloadQuotes = async () => {
     try {
@@ -177,7 +184,10 @@ const AdminQuotes: React.FC = () => {
     })();
     return () => { aborted = true; };
   }, []);
-  const localQuotes = isLocalHost ? getQuotes() : [];
+  const localQuotes = useMemo(() => {
+    if (!isLocalHost) return [];
+    return getQuotes();
+  }, [isLocalHost]);
   const quotes: QuoteItem[] = useMemo(() => {
     if (!isLocalHost) return remoteQuotes;
     if (!remoteQuotes.length) return localQuotes;
@@ -197,6 +207,39 @@ const AdminQuotes: React.FC = () => {
         .some((v) => String(v).toLowerCase().includes(q))
     );
   }, [quotes, query]);
+
+  const fetchStorageInfo = async () => {
+    try {
+      setStorageLoading(true);
+      const token = (process as any).env.REACT_APP_BACKEND_TOKEN || '';
+      const prefix = (() => {
+        const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+        if (String(env).trim()) return String(env).trim().replace(/\/$/, '');
+        if (typeof window !== 'undefined') {
+          const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+          return isLocal ? 'http://localhost:3001' : '';
+        }
+        return '';
+      })();
+      const url = `${prefix}/api/admin/storage-info`;
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(url, { headers, credentials: 'include' });
+      if (!res.ok) throw new Error('http');
+      const data = await res.json();
+      setStorageInfo(data?.info || null);
+    } catch (err) {
+      setStorageInfo(null);
+      setSnackbar({ open: true, message: 'Impossible de lire le diagnostic stockage.', severity: 'error' });
+    } finally {
+      setStorageLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStorageInfo();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStatus = async (id: string, status: QuoteItem['status']) => {
     try {
@@ -774,18 +817,43 @@ const AdminQuotes: React.FC = () => {
   return (
     <Box sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
       <Container maxWidth="lg">
-        <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2} sx={{ mb: 2 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>Devis reçus</Typography>
-          <Stack direction="row" spacing={1}>
-            <TextField size="small" placeholder="Rechercher..." value={query} onChange={(e) => setQuery(e.target.value)} />
-            <Tooltip title="Rafraîchir">
-              <IconButton onClick={() => { void reloadQuotes(); }}>
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>Ajouter un devis</Button>
-            <Button variant="outlined" color="error" onClick={handleOpenConfirm}>Tout supprimer</Button>
+        <Stack spacing={2} sx={{ mb: 2 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2}>
+            <Typography variant="h5" sx={{ fontWeight: 700 }}>Devis reçus</Typography>
+            <Stack direction="row" spacing={1}>
+              <TextField size="small" placeholder="Rechercher..." value={query} onChange={(e) => setQuery(e.target.value)} />
+              <Tooltip title="Rafraîchir">
+                <IconButton onClick={() => { void reloadQuotes(); }}>
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>Ajouter un devis</Button>
+              <Button variant="outlined" color="error" onClick={handleOpenConfirm}>Tout supprimer</Button>
+            </Stack>
           </Stack>
+
+          <Alert
+            severity={storageInfo?.storage === 'mongo' && storageInfo.mongo.connected ? 'success' : 'warning'}
+            action={
+              <Button color="inherit" size="small" onClick={() => { void fetchStorageInfo(); }} disabled={storageLoading}>
+                {storageLoading ? '...' : 'Actualiser'}
+              </Button>
+            }
+          >
+            {storageInfo ? (
+              storageInfo.storage === 'mongo' && storageInfo.mongo.connected ? (
+                <>
+                  Stockage actuel : <strong>MongoDB</strong> ({storageInfo.mongo.count ?? '—'} documents).
+                </>
+              ) : (
+                <>
+                  Stockage actuel : <strong>fichier local</strong>. Configure MongoDB sur Vercel pour sécuriser les devis ({storageInfo.file.count ?? '0'} devis enregistrés localement).
+                </>
+              )
+            ) : (
+              <>Diagnostic du stockage en cours…</>
+            )}
+          </Alert>
         </Stack>
 
         <Paper elevation={4} sx={{ p: 0, borderRadius: 3, overflow: 'hidden' }}>
