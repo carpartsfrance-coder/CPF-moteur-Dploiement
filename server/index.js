@@ -1400,6 +1400,89 @@ app.post('/api/public/quote-request', async (req, res) => {
   }
 });
 
+// === Admin: création manuelle d'un devis ===
+app.post('/api/admin/quotes', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+
+    const b = req.body || {};
+    const name = String(b.name || '').trim();
+    const email = String(b.email || '').trim();
+    const phone = String(b.phone || '').trim();
+    const vehicleId = String(b.vehicleId || '').trim();
+    const message = String(b.message || '').trim();
+    const source = String(b.source || 'manual').trim() || 'manual';
+    const createdAt = String(b.createdAt || new Date().toISOString());
+
+    if (!vehicleId || (!email && !phone)) {
+      return res.status(400).json({ ok: false, error: 'invalid_payload' });
+    }
+
+    const id = String(b.id || '').trim() || ('Q-' + crypto.randomBytes(3).toString('hex').toUpperCase());
+    let persisted = false;
+
+    if (MONGODB_URI) {
+      try {
+        await initMongo();
+        const col = mongoDb.collection('quotes');
+        await col.insertOne({
+          id,
+          name,
+          email,
+          phone,
+          vehicleId,
+          message,
+          source,
+          createdAt,
+          deliveredAt: new Date().toISOString(),
+        });
+        persisted = true;
+      } catch (e) {
+        console.error('[admin quotes create] mongo insert error', e?.message || e);
+      }
+    }
+
+    if (!persisted) {
+      try {
+        setQuoteMeta(id, { name, email, phone, vehicleId, message, source, createdAt, deliveredAt: new Date().toISOString() });
+        persisted = true;
+      } catch (e) {
+        console.error('[admin quotes create] local meta write error', e?.message || e);
+      }
+    }
+
+    if (!persisted) return res.status(500).json({ ok: false, error: 'persist_failed' });
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(201).json({
+      ok: true,
+      quote: {
+        id,
+        name,
+        email,
+        phone,
+        vehicleId,
+        message,
+        createdAt,
+        status: 'nouveau',
+      },
+    });
+  } catch (err) {
+    console.error('[admin quotes create] error', err?.message || err);
+    return res.status(500).json({ ok: false, error: 'create_error' });
+  }
+});
+
 // === Admin: liste des devis enregistrés (basés sur les métadonnées stockées) ===
 app.get('/api/admin/quotes', async (req, res) => {
   try {

@@ -88,6 +88,13 @@ const AdminQuotes: React.FC = () => {
   const [adminResponses, setAdminResponses] = useState<QuoteResponse[]>([]);
   const [clientReplies, setClientReplies] = useState<ClientReply[]>([]);
   const [clientRepliesLoading, setClientRepliesLoading] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createEmail, setCreateEmail] = useState('');
+  const [createPhone, setCreatePhone] = useState('');
+  const [createVehicleId, setCreateVehicleId] = useState('');
+  const [createMessage, setCreateMessage] = useState('');
+  const [createLoading, setCreateLoading] = useState(false);
 
   // Lire les devis à chaque rendu; 'tick' force un re-render lorsque l'on modifie les données
   const [remoteQuotes, setRemoteQuotes] = useState<QuoteItem[]>([]);
@@ -171,7 +178,14 @@ const AdminQuotes: React.FC = () => {
     return () => { aborted = true; };
   }, []);
   const localQuotes = isLocalHost ? getQuotes() : [];
-  const quotes = (remoteQuotes.length || !isLocalHost) ? remoteQuotes : localQuotes;
+  const quotes: QuoteItem[] = useMemo(() => {
+    if (!isLocalHost) return remoteQuotes;
+    if (!remoteQuotes.length) return localQuotes;
+    return [
+      ...remoteQuotes,
+      ...localQuotes.filter((lq) => !remoteQuotes.some((rq) => rq.id === lq.id)),
+    ];
+  }, [remoteQuotes, localQuotes, isLocalHost]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -650,6 +664,81 @@ const AdminQuotes: React.FC = () => {
 
   const handleCloseSnackbar = () => setSnackbar((prev) => ({ ...prev, open: false }));
 
+  const resetCreateForm = () => {
+    setCreateName('');
+    setCreateEmail('');
+    setCreatePhone('');
+    setCreateVehicleId('');
+    setCreateMessage('');
+  };
+
+  const handleCreateQuote = async () => {
+    const name = createName.trim();
+    const email = createEmail.trim();
+    const phone = createPhone.trim();
+    const vehicleId = createVehicleId.trim();
+    const message = createMessage.trim();
+    if (!vehicleId || (!email && !phone)) {
+      setSnackbar({ open: true, message: 'Renseignez au minimum le véhicule et un email ou un téléphone.', severity: 'error' });
+      return;
+    }
+    try {
+      setCreateLoading(true);
+      const token = (process as any).env.REACT_APP_BACKEND_TOKEN || '';
+      const prefix = (() => {
+        const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+        if (String(env).trim()) return String(env).trim().replace(/\/$/, '');
+        if (typeof window !== 'undefined') {
+          const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+          return isLocal ? 'http://localhost:3001' : '';
+        }
+        return '';
+      })();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${prefix}/api/admin/quotes`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          vehicleId,
+          message,
+          source: 'manual',
+          createdAt: new Date().toISOString(),
+        }),
+      });
+      if (!res.ok) throw new Error('HTTP');
+      const data = await res.json();
+      const q = data?.quote || {};
+      const newQuote: QuoteItem = {
+        id: String(q.id || ''),
+        name: String(q.name || name),
+        email: String(q.email || email),
+        phone: String(q.phone || phone),
+        vehicleId: String(q.vehicleId || vehicleId),
+        message: String(q.message || message),
+        createdAt: String(q.createdAt || new Date().toISOString()),
+        channel: 'api',
+        status: (q.status || 'nouveau') as QuoteItem['status'],
+        followUpAt: q.followUpAt ? String(q.followUpAt) : undefined,
+        lastOpenedAt: q.lastOpenedAt ? String(q.lastOpenedAt) : undefined,
+        openCount: typeof q.openCount === 'number' ? q.openCount : undefined,
+        responses: [],
+      };
+      setRemoteQuotes((prev) => [newQuote, ...prev]);
+      resetCreateForm();
+      setCreateOpen(false);
+      setSnackbar({ open: true, message: 'Devis ajouté.', severity: 'success' });
+    } catch (e) {
+      setSnackbar({ open: true, message: "Échec de création du devis.", severity: 'error' });
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ bgcolor: 'background.default', py: { xs: 4, md: 6 } }}>
       <Container maxWidth="lg">
@@ -662,6 +751,7 @@ const AdminQuotes: React.FC = () => {
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreateOpen(true)}>Ajouter un devis</Button>
             <Button variant="outlined" color="error" onClick={handleOpenConfirm}>Tout supprimer</Button>
           </Stack>
         </Stack>
@@ -813,6 +903,54 @@ const AdminQuotes: React.FC = () => {
         <DialogActions>
           <Button onClick={handleCloseConfirm}>Annuler</Button>
           <Button onClick={handleConfirmClear} color="error" variant="contained">Supprimer</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={createOpen} onClose={() => { if (!createLoading) { setCreateOpen(false); resetCreateForm(); } }} fullWidth maxWidth="sm">
+        <DialogTitle>Ajouter un devis manuel</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Nom du client"
+              value={createName}
+              onChange={(e) => setCreateName(e.target.value)}
+              fullWidth
+            />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <TextField
+                label="Email"
+                type="email"
+                value={createEmail}
+                onChange={(e) => setCreateEmail(e.target.value)}
+                fullWidth
+              />
+              <TextField
+                label="Téléphone"
+                value={createPhone}
+                onChange={(e) => setCreatePhone(e.target.value)}
+                fullWidth
+              />
+            </Stack>
+            <TextField
+              label="Immatriculation / identifiant véhicule"
+              value={createVehicleId}
+              onChange={(e) => setCreateVehicleId(e.target.value)}
+              required
+              fullWidth
+            />
+            <TextField
+              label="Message / détails de la demande"
+              value={createMessage}
+              onChange={(e) => setCreateMessage(e.target.value)}
+              fullWidth
+              multiline
+              minRows={3}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { if (!createLoading) { setCreateOpen(false); resetCreateForm(); } }}>Annuler</Button>
+          <Button onClick={() => { if (!createLoading) { void handleCreateQuote(); } }} variant="contained" disabled={createLoading}>Enregistrer</Button>
         </DialogActions>
       </Dialog>
 

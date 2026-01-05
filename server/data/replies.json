@@ -325,6 +325,32 @@
       "source": "hero",
       "createdAt": "2025-11-29T10:11:19.732Z",
       "deliveredAt": "2025-11-29T10:11:20.368Z"
+    },
+    "Q-9B7BAF": {
+      "name": "",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "",
+      "vehicleId": "EF-622-XY",
+      "message": "Configuration souhaitée : Moteur complet (avec accessoires)",
+      "source": "hero",
+      "createdAt": "2025-12-01T10:00:00.000Z",
+      "deliveredAt": "2025-12-01T10:00:01.000Z"
+    },
+    "Q-873D1E": {
+      "name": "",
+      "email": "killian.belabbes@gmail.com",
+      "phone": "",
+      "vehicleId": "DF-784-SA",
+      "message": "Configuration souhaitée : Moteur complet (avec accessoires)",
+      "source": "hero",
+      "createdAt": "2025-12-01T10:05:00.000Z",
+      "deliveredAt": "2025-12-01T10:05:01.000Z"
+    },
+    "Q-4A233A": {
+      "status": "en_attente_client",
+      "lastReplyAt": "2026-01-05T11:35:28.128Z",
+      "lastReplyId": "r-654083ab",
+      "followUpAt": "2026-01-07T11:35:28.128Z"
     }
   },
   "1eccc3e1-7b92-45fa-95cc-ee625e67e654": [
