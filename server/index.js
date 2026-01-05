@@ -4,7 +4,7 @@ import compression from 'compression';
 import cors from 'cors';
 import { MailerSend, EmailParams, Sender, Recipient, Attachment } from 'mailersend';
 import crypto from 'crypto';
-import { addReply, getReplies, setQuoteMeta, getQuoteMeta, listQuoteMetas } from './storage.js';
+import { addReply, getReplies, setQuoteMeta, getQuoteMeta, listQuoteMetas, deleteQuoteMeta } from './storage.js';
 import buildReplyEmailHtml, { buildAckEmailHtml } from './emailTemplate.js';
 import path from 'path';
 import fs from 'fs';
@@ -1576,6 +1576,50 @@ app.patch('/api/admin/quotes/:id/status', async (req, res) => {
     return res.json({ ok: true, id, status, updatedAt: nowIso });
   } catch (err) {
     console.error('[admin status] error', err?.message || err);
+    return res.status(500).json({ ok: false, error: 'server_error' });
+  }
+});
+
+// === Admin: suppression d'un devis ===
+app.delete('/api/admin/quotes/:id', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) return res.status(401).json({ ok: false, error: 'unauthorized' });
+
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ ok: false, error: 'missing_id' });
+
+    let removed = false;
+    if (MONGODB_URI) {
+      try {
+        await initMongo();
+        const col = mongoDb.collection('quotes');
+        const r = await col.deleteOne({ id });
+        if (r && r.deletedCount > 0) removed = true;
+      } catch (e) {
+        console.error('[admin quotes delete] mongo delete error', e?.message || e);
+      }
+    }
+
+    try {
+      deleteQuoteMeta(id);
+      removed = true;
+    } catch (e) {
+      console.error('[admin quotes delete] local meta delete error', e?.message || e);
+    }
+
+    if (!removed) return res.status(404).json({ ok: false, error: 'not_found' });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, id });
+  } catch (err) {
+    console.error('[admin quotes delete] error', err?.message || err);
     return res.status(500).json({ ok: false, error: 'server_error' });
   }
 });

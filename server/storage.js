@@ -68,3 +68,11 @@ export function listQuoteMetas() {
   });
   return arr;
 }
+
+export function deleteQuoteMeta(quoteId) {
+  const all = readAll();
+  if (all.__meta && all.__meta[quoteId]) {
+    delete all.__meta[quoteId];
+    writeAll(all);
+  }
+}

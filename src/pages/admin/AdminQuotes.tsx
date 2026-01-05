@@ -280,9 +280,41 @@ const AdminQuotes: React.FC = () => {
     return minK + idx * 1000;
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    // Supprime de la copie locale (stockage navigateur)
     deleteQuote(id);
+    // Supprime immédiatement du tableau de devis distants pour mettre à jour l'UI
+    setRemoteQuotes((prev) => prev.filter((q) => q.id !== id));
     forceRender();
+
+    try {
+      // Appeler le backend uniquement si ce devis provient des données distantes
+      const isRemote = remoteQuotes.some((q) => q.id === id);
+      if (!isRemote) return;
+
+      const token = (process as any).env.REACT_APP_BACKEND_TOKEN || '';
+      const prefix = (() => {
+        const env = (process as any).env.REACT_APP_BACKEND_URL || '';
+        if (String(env).trim()) return String(env).trim().replace(/\/$/, '');
+        if (typeof window !== 'undefined') {
+          const isLocal = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+          return isLocal ? 'http://localhost:3001' : '';
+        }
+        return '';
+      })();
+      if (prefix) {
+        const headers: Record<string, string> = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(`${prefix}/api/admin/quotes/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers,
+          credentials: 'include',
+        });
+        if (!res.ok && res.status !== 404) throw new Error('HTTP');
+      }
+    } catch (e) {
+      setSnackbar({ open: true, message: 'Échec de suppression du devis côté serveur.', severity: 'error' });
+    }
   };
 
   const handleCopy = async (q: QuoteItem) => {
