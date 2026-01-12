@@ -769,6 +769,12 @@ async function ensureRedirectsIndexes() {
   try { await col.createIndex({ from: 1 }, { unique: true }); } catch {}
 }
 
+async function ensureQuotesIndexes() {
+  if (!mongoDb) return;
+  const col = mongoDb.collection('quotes');
+  try { await col.createIndex({ createdAt: -1 }); } catch {}
+}
+
 // Détection de contenu faible (noindex auto)
 function wordCountFromHtml(html = '') {
   const text = String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -1559,8 +1565,27 @@ app.get('/api/admin/quotes', async (req, res) => {
     if (MONGODB_URI) {
       try {
         await initMongo();
+        await ensureQuotesIndexes();
         const col = mongoDb.collection('quotes');
-        const arr = await col.find({}, { sort: { createdAt: -1 } }).limit(500).toArray();
+        const arr = await col.find(
+          {},
+          {
+            projection: {
+              id: 1,
+              name: 1,
+              email: 1,
+              phone: 1,
+              vehicleId: 1,
+              message: 1,
+              createdAt: 1,
+              status: 1,
+              followUpAt: 1,
+              lastOpenedAt: 1,
+              openCount: 1,
+            },
+            sort: { createdAt: -1 },
+          }
+        ).limit(500).toArray();
         quotes = arr.map((d) => ({
           id: String(d.id || d._id || ''),
           name: d.name || '',
