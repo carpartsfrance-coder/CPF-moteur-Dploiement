@@ -242,6 +242,8 @@ const AdminBlogPosts: React.FC = () => {
       .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     const wordCount = text ? text.split(' ').filter(Boolean).length : 0;
     const tagsCount = Array.isArray(current.tags) ? current.tags.filter(Boolean).length : 0;
+    void wordCount;
+    void tagsCount;
     const body: any = { ...current };
     delete body.id;
     if (typeof body.tags === 'string') {

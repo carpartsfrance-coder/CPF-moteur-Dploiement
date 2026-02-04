@@ -87,6 +87,8 @@ const AdminEngineReport: React.FC = () => {
   const locationState = location as typeof location & { state?: { quote?: QuoteSummary } };
   const navigate = useNavigate();
 
+  const quoteFromState = locationState.state?.quote;
+
   const [, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({ open: false, message: '', severity: 'success' });
@@ -104,7 +106,7 @@ const AdminEngineReport: React.FC = () => {
   const [photoUrlsText, setPhotoUrlsText] = useState('');
   const [footerNote, setFooterNote] = useState('Photos supplémentaires et vidéos d\'endoscopie envoyées par e-mail.');
   const [cylinders, setCylinders] = useState<CylinderRow[]>([]);
-  const [quote, setQuote] = useState<QuoteSummary | null>(locationState.state?.quote || null);
+  const [quote, setQuote] = useState<QuoteSummary | null>(quoteFromState || null);
 
   const parsedPhotoUrls = useMemo(
     () =>
@@ -116,10 +118,10 @@ const AdminEngineReport: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!quote && locationState.state?.quote) {
-      setQuote(locationState.state.quote);
+    if (!quote && quoteFromState) {
+      setQuote(quoteFromState);
     }
-  }, [locationState.state, quote]);
+  }, [quoteFromState, quote]);
 
   useEffect(() => {
     if (!quoteId) return;
