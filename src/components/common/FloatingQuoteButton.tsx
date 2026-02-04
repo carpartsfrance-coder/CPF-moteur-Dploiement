@@ -294,6 +294,7 @@ const FloatingQuoteButton: React.FC = () => {
                 onChange={handleInputChange}
                 required
                 size="small"
+                helperText="Nous ne vous rappellerons que si vous le demandez."
               />
             </Box>
             <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)' } }}>

@@ -212,7 +212,14 @@ const ContactPage: React.FC = () => {
                   <TextField required fullWidth label="Nom du garage" name="garage" />
                   <TextField required fullWidth label="Ville" name="ville" />
                   <TextField required fullWidth label="Email" name="email" autoComplete="email" />
-                  <TextField required fullWidth label="Téléphone" name="telephone" autoComplete="tel" />
+                  <TextField
+                    required
+                    fullWidth
+                    label="Téléphone"
+                    name="telephone"
+                    autoComplete="tel"
+                    helperText="Nous ne vous rappellerons que si vous le demandez."
+                  />
                   <Box sx={{ gridColumn: '1 / -1' }}>
                     <TextField required fullWidth label="Sujet / Référence moteur" name="sujet" />
                   </Box>

@@ -61,8 +61,8 @@ const HeroSection: React.FC = () => {
     const packageLabel = selectedOption?.label || '';
     const message = packageLabel ? `Configuration souhaitée : ${packageLabel}` : '';
 
-    // Validation minimale: plaque/châssis/code requis ET (téléphone OU email) ET type de moteur
-    if (!vehicleId || (!phone && !email) || !qPackage) {
+    // Validation minimale: plaque/châssis/code requis ET téléphone requis ET type de moteur
+    if (!vehicleId || !phone || !qPackage) {
       setShowErrors(true);
       return;
     }
@@ -653,14 +653,14 @@ const HeroSection: React.FC = () => {
                         <TextField
                           size="medium"
                           fullWidth
-                          label="Téléphone"
+                          label="Téléphone *"
                           value={qPhone}
                           onChange={(e) => setQPhone(e.target.value)}
                           type="tel"
                           autoComplete="tel"
                           inputProps={{ inputMode: 'tel' }}
-                          helperText={showErrors && !qPhone.trim() && !qEmail.trim() ? 'Téléphone ou Email requis' : undefined}
-                          error={showErrors && !qPhone.trim() && !qEmail.trim()}
+                          helperText={showErrors && !qPhone.trim() ? 'Téléphone requis' : undefined}
+                          error={showErrors && !qPhone.trim()}
                           InputLabelProps={{ shrink: true }}
                           InputProps={{
                             startAdornment: (
@@ -671,6 +671,9 @@ const HeroSection: React.FC = () => {
                           }}
                           sx={{ '& .MuiOutlinedInput-root': { backgroundColor: '#fff', borderRadius: 2 } }}
                         />
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                          Nous ne vous rappellerons que si vous le demandez.
+                        </Typography>
                         <TextField
                           size="medium"
                           fullWidth

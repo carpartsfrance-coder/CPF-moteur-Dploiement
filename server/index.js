@@ -4,7 +4,7 @@ import compression from 'compression';
 import cors from 'cors';
 import { MailerSend, EmailParams, Sender, Recipient, Attachment } from 'mailersend';
 import crypto from 'crypto';
-import { addReply, getReplies, setQuoteMeta, getQuoteMeta, listQuoteMetas, deleteQuoteMeta } from './storage.js';
+import { addReply, getReplies, setQuoteMeta, getQuoteMeta, listQuoteMetas, deleteQuoteMeta, saveEngineReport, getEngineReport, findEngineReportByQuoteId } from './storage.js';
 import buildReplyEmailHtml, { buildAckEmailHtml } from './emailTemplate.js';
 import path from 'path';
 import fs from 'fs';
@@ -114,6 +114,112 @@ app.use(async (req, res, next) => {
     if (MONGODB_URI) {
       await initMongo();
       const red = await mongoDb.collection('redirects').findOne({ from: rawPath });
+      if (red && red.to) {
+        const loc = String(red.to) + (qs ? `?${qs}` : '');
+        try { return res.redirect(301, loc); } catch { return res.redirect(302, loc); }
+      }
+    }
+    return next();
+  } catch { return next(); }
+});
+
+app.get('/api/public/quote-feedback', async (req, res) => {
+  try {
+    const quoteId = String((req.query && req.query.quoteId) || '').trim();
+    const token = String((req.query && req.query.token) || '').trim();
+    const interestRaw = String((req.query && req.query.interest) || '').trim();
+    const callbackRaw = String((req.query && req.query.callback) || '').trim();
+
+    const interest = interestRaw === '1' || /^true$/i.test(interestRaw);
+    const callback = callbackRaw === '1' || /^true$/i.test(callbackRaw);
+
+    if (!quoteId || !token) {
+      return res.status(400).send('<!doctype html><html><body><p>Lien invalide.</p></body></html>');
+    }
+
+    let expectedToken = '';
+    try {
+      if (MONGODB_URI) {
+        await initMongo();
+        const doc = await mongoDb.collection('quotes').findOne(
+          { id: quoteId },
+          { projection: { feedbackToken: 1 } }
+        );
+        expectedToken = String(doc?.feedbackToken || '').trim();
+      }
+    } catch {}
+    if (!expectedToken) {
+      try {
+        const meta = getQuoteMeta(quoteId) || {};
+        expectedToken = String(meta.feedbackToken || '').trim();
+      } catch {}
+    }
+
+    if (!expectedToken || expectedToken !== token) {
+      return res.status(403).send('<!doctype html><html><body><p>Lien expiré ou invalide.</p></body></html>');
+    }
+
+    const nowIso = new Date().toISOString();
+    const clientFeedback = {
+      interest: !!interest,
+      callback: !!callback,
+      respondedAt: nowIso,
+      source: 'email_button',
+    };
+
+    try {
+      setQuoteMeta(quoteId, { clientFeedback });
+    } catch {}
+
+    try {
+      if (MONGODB_URI) {
+        await initMongo();
+        await mongoDb.collection('quotes').updateOne(
+          { id: quoteId },
+          { $set: { clientFeedback, updatedAt: nowIso } },
+          { upsert: false }
+        );
+      }
+    } catch {}
+
+    const title = interest ? 'Merci, votre retour est bien enregistré.' : 'Merci, votre retour est bien enregistré.';
+    const subtitle = interest
+      ? 'Nous vous rappelons rapidement pour finaliser.'
+      : 'Nous ne vous rappellerons pas.';
+
+    const safeQuoteId = escapeHtml(quoteId);
+    const safeTitle = escapeHtml(title);
+    const safeSubtitle = escapeHtml(subtitle);
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).send(`<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Réponse enregistrée</title>
+  </head>
+  <body style="margin:0; padding:0; background:#f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+    <div style="max-width:720px; margin:40px auto; padding:16px;">
+      <div style="background:#ffffff; border:1px solid #e5e7eb; border-radius:14px; padding:18px 18px; box-shadow: 0 12px 30px rgba(15,23,42,0.08);">
+        <div style="display:inline-block; font-size:12px; text-transform:uppercase; letter-spacing:0.12em; color:#6b7280; margin-bottom:8px;">Devis ${safeQuoteId}</div>
+        <h1 style="margin:0 0 8px 0; font-size:20px; color:#111827;">${safeTitle}</h1>
+        <p style="margin:0 0 14px 0; font-size:14px; color:#374151; line-height:1.6;">${safeSubtitle}</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+          <a href="tel:0465845488" style="display:inline-block; padding:10px 14px; border-radius:999px; background:#e30613; color:#ffffff; text-decoration:none; font-weight:700;">Appeler le service devis</a>
+          <a href="https://wa.me/33756875025" target="_blank" rel="noopener" style="display:inline-block; padding:10px 14px; border-radius:999px; background:#16a34a; color:#ffffff; text-decoration:none; font-weight:700;">WhatsApp</a>
+        </div>
+        <p style="margin:14px 0 0 0; font-size:12px; color:#6b7280;">Vous pouvez fermer cette page.</p>
+      </div>
+    </div>
+  </body>
+</html>`);
+  } catch (err) {
+    console.error('[public quote-feedback] error', err?.message || err);
+    return res.status(500).send('<!doctype html><html><body><p>Erreur serveur.</p></body></html>');
+  }
+});
 
 // === Admin: diagnostic stockage (MongoDB vs fichier) ===
 app.get('/api/admin/storage-info', async (req, res) => {
@@ -432,14 +538,6 @@ app.get('/moteur/:brand/:model', async (req, res) => {
     console.error('[hub modele] error', err);
     return res.status(500).send('<!doctype html><html><body><p>Erreur serveur.</p></body></html>');
   }
-});
-      if (red && red.to) {
-        const loc = String(red.to) + (qs ? `?${qs}` : '');
-        try { return res.redirect(301, loc); } catch { return res.redirect(302, loc); }
-      }
-    }
-    return next();
-  } catch { return next(); }
 });
 
 // === Auth admin (simple) — top-level ===
@@ -773,6 +871,12 @@ async function ensureQuotesIndexes() {
   if (!mongoDb) return;
   const col = mongoDb.collection('quotes');
   try { await col.createIndex({ createdAt: -1 }); } catch {}
+}
+
+async function ensureEngineReportsIndexes() {
+  if (!mongoDb) return;
+  const col = mongoDb.collection('engine_reports');
+  try { await col.createIndex({ quoteId: 1, createdAt: -1 }); } catch {}
 }
 
 // Détection de contenu faible (noindex auto)
@@ -1320,7 +1424,7 @@ app.post('/api/public/quote-request', async (req, res) => {
     const source = String(b.source || '').trim();
     const createdAt = String(b.createdAt || new Date().toISOString());
 
-    if (!vehicleId || (!phone && !email)) {
+    if (!vehicleId || !phone) {
       return res.status(400).json({ ok: false, error: 'invalid_payload' });
     }
 
@@ -1582,6 +1686,7 @@ app.get('/api/admin/quotes', async (req, res) => {
               followUpAt: 1,
               lastOpenedAt: 1,
               openCount: 1,
+              clientFeedback: 1,
             },
             sort: { createdAt: -1 },
           }
@@ -1598,13 +1703,40 @@ app.get('/api/admin/quotes', async (req, res) => {
           followUpAt: d.followUpAt ? String(d.followUpAt) : undefined,
           lastOpenedAt: d.lastOpenedAt ? String(d.lastOpenedAt) : undefined,
           openCount: typeof d.openCount === 'number' ? d.openCount : undefined,
+          clientFeedback: d.clientFeedback ? d.clientFeedback : undefined,
         }));
       } catch (e) {
         console.error('[admin quotes] mongo read error', e?.message || e);
-        quotes = listQuoteMetas();
+        quotes = listQuoteMetas().map((m) => ({
+          id: String(m.id || ''),
+          name: m.name || '',
+          email: m.email || '',
+          phone: m.phone || '',
+          vehicleId: m.vehicleId || '',
+          message: m.message || '',
+          createdAt: String(m.createdAt || m.deliveredAt || new Date().toISOString()),
+          status: m.status || 'nouveau',
+          followUpAt: m.followUpAt ? String(m.followUpAt) : undefined,
+          lastOpenedAt: m.lastOpenedAt ? String(m.lastOpenedAt) : undefined,
+          openCount: typeof m.openCount === 'number' ? m.openCount : undefined,
+          clientFeedback: m.clientFeedback ? m.clientFeedback : undefined,
+        }));
       }
     } else {
-      quotes = listQuoteMetas();
+      quotes = listQuoteMetas().map((m) => ({
+        id: String(m.id || ''),
+        name: m.name || '',
+        email: m.email || '',
+        phone: m.phone || '',
+        vehicleId: m.vehicleId || '',
+        message: m.message || '',
+        createdAt: String(m.createdAt || m.deliveredAt || new Date().toISOString()),
+        status: m.status || 'nouveau',
+        followUpAt: m.followUpAt ? String(m.followUpAt) : undefined,
+        lastOpenedAt: m.lastOpenedAt ? String(m.lastOpenedAt) : undefined,
+        openCount: typeof m.openCount === 'number' ? m.openCount : undefined,
+        clientFeedback: m.clientFeedback ? m.clientFeedback : undefined,
+      }));
     }
     res.setHeader('Cache-Control', 'no-store');
     return res.json({ ok: true, quotes });
@@ -1699,10 +1831,174 @@ app.delete('/api/admin/quotes/:id', async (req, res) => {
     }
 
     if (!removed) return res.status(404).json({ ok: false, error: 'not_found' });
+
     res.setHeader('Cache-Control', 'no-store');
     return res.json({ ok: true, id });
   } catch (err) {
     console.error('[admin quotes delete] error', err?.message || err);
+    return res.status(500).json({ ok: false, error: 'server_error' });
+  }
+});
+
+app.post('/api/admin/engine-reports', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) {
+      return res.status(401).json({ ok: false, error: 'unauthorized' });
+    }
+
+    const b = req.body || {};
+    const quoteId = String(b.quoteId || '').trim();
+    if (!quoteId) {
+      return res.status(400).json({ ok: false, error: 'missing_quote_id' });
+    }
+    const nowIso = new Date().toISOString();
+    const idIn = String(b.id || '').trim();
+    const id = idIn || ('ER-' + crypto.randomBytes(4).toString('hex').toUpperCase());
+    const reportDateIn = String(b.reportDate || '').trim();
+    const reportDate = reportDateIn || nowIso;
+    const technicianName = String(b.technicianName || '').trim();
+    const brandModel = String(b.brandModel || '').trim();
+    const engineSerial = String(b.engineSerial || '').trim();
+    const engineRef = String(b.engineRef || '').trim();
+    const cylindersIn = Array.isArray(b.cylinders) ? b.cylinders : [];
+    const cylinders = cylindersIn.map((c) => {
+      const idxRaw = c && (typeof c.index === 'number' ? c.index : parseInt(String(c.index || ''), 10));
+      const index = Number.isFinite(idxRaw) ? idxRaw : null;
+      const compression = c && c.compression != null ? String(c.compression) : '';
+      const endoscopy = c && c.endoscopy != null ? String(c.endoscopy) : '';
+      const oilPressure = c && c.oilPressure != null ? String(c.oilPressure) : '';
+      return { index, compression, endoscopy, oilPressure };
+    }).filter((c) => c && (c.index != null || c.compression || c.endoscopy || c.oilPressure));
+    const summary = String(b.summary || '').trim();
+    const noiseAnalysis = String(b.noiseAnalysis || '').trim();
+    const oilAnalysis = String(b.oilAnalysis || '').trim();
+    const visualCheck = String(b.visualCheck || '').trim();
+    const photoUrls = Array.isArray(b.photoUrls) ? b.photoUrls.map((u) => String(u || '').trim()).filter((u) => u) : [];
+    const footerNoteIn = String(b.footerNote || '').trim();
+    const createdAtIn = String(b.createdAt || '').trim();
+    const createdAt = createdAtIn || nowIso;
+    const doc = {
+      id,
+      quoteId,
+      reportDate,
+      technicianName,
+      brandModel,
+      engineSerial,
+      engineRef,
+      cylinders,
+      summary,
+      noiseAnalysis,
+      oilAnalysis,
+      visualCheck,
+      photoUrls,
+      footerNote: footerNoteIn || undefined,
+      createdAt,
+      updatedAt: nowIso,
+    };
+
+    let persisted = false;
+    if (MONGODB_URI) {
+      try {
+        await initMongo();
+        await ensureEngineReportsIndexes();
+        const col = mongoDb.collection('engine_reports');
+        await col.updateOne(
+          { id },
+          { $set: doc },
+          { upsert: true },
+        );
+        persisted = true;
+      } catch (e) {
+        console.error('[engine-reports save] mongo error', e?.message || e);
+      }
+    }
+
+    if (!persisted) {
+      try {
+        saveEngineReport(doc);
+        persisted = true;
+      } catch (e) {
+        console.error('[engine-reports save] local error', e?.message || e);
+      }
+    }
+
+    if (!persisted) return res.status(500).json({ ok: false, error: 'persist_failed' });
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json({ ok: true, report: doc });
+  } catch (err) {
+    console.error('[engine-reports save] error', err?.message || err);
+    return res.status(500).json({ ok: false, error: 'server_error' });
+  }
+});
+
+app.get('/api/admin/engine-reports/by-quote/:quoteId', async (req, res) => {
+  try {
+    const ADMIN_TOKEN = String(process.env.BACKEND_TOKEN || '').trim();
+    const AUTH = String(req.headers?.authorization || '');
+    const APIK = String(req.headers?.['x-api-key'] || '');
+    const host = String(req.headers?.host || '');
+    const isLocalHost = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const remote = String((req.socket && req.socket.remoteAddress) || '');
+    const isLocalAddr = /^::1$|^::ffff:127\.0\.0\.1$|^127\.0\.0\.1$/.test(remote);
+    const ok = (isLocalHost || isLocalAddr) || (Boolean(ADMIN_TOKEN) && (AUTH === `Bearer ${ADMIN_TOKEN}` || APIK === ADMIN_TOKEN));
+    if (!ok) return res.status(401).json({ ok: false, error: 'unauthorized' });
+    const quoteId = String(req.params.quoteId || '').trim();
+    if (!quoteId) return res.status(400).json({ ok: false, error: 'missing_quote_id' });
+
+    let report = null;
+    if (MONGODB_URI) {
+      try {
+        await initMongo();
+        await ensureEngineReportsIndexes();
+        const col = mongoDb.collection('engine_reports');
+        const arr = await col.find({ quoteId }, { sort: { updatedAt: -1, createdAt: -1 } }).limit(1).toArray();
+        if (arr && arr.length) {
+          const d = arr[0];
+          report = {
+            id: String(d.id || d._id || ''),
+            quoteId: String(d.quoteId || quoteId),
+            reportDate: String(d.reportDate || ''),
+            technicianName: String(d.technicianName || ''),
+            brandModel: String(d.brandModel || ''),
+            engineSerial: String(d.engineSerial || ''),
+            engineRef: String(d.engineRef || ''),
+            cylinders: Array.isArray(d.cylinders) ? d.cylinders : [],
+            summary: String(d.summary || ''),
+            noiseAnalysis: String(d.noiseAnalysis || ''),
+            oilAnalysis: String(d.oilAnalysis || ''),
+            visualCheck: String(d.visualCheck || ''),
+            photoUrls: Array.isArray(d.photoUrls) ? d.photoUrls : [],
+            footerNote: d.footerNote ? String(d.footerNote) : undefined,
+            createdAt: String(d.createdAt || ''),
+            updatedAt: String(d.updatedAt || ''),
+          };
+        }
+      } catch (e) {
+        console.error('[engine-reports by-quote] mongo read error', e?.message || e);
+      }
+    }
+
+    if (!report) {
+      try {
+        const local = findEngineReportByQuoteId(quoteId);
+        if (local) report = local;
+      } catch (e) {
+        console.error('[engine-reports by-quote] local read error', e?.message || e);
+      }
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ ok: true, report });
+  } catch (err) {
+    console.error('[engine-reports by-quote] error', err?.message || err);
     return res.status(500).json({ ok: false, error: 'server_error' });
   }
 });
@@ -1744,9 +2040,40 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
     const origin = getWebsiteOrigin();
     const replyId = 'r-' + crypto.randomBytes(4).toString('hex');
     const serverBase = `${req.protocol}://${req.get('host')}`;
-    const publicBase = (process.env.COMPANY_WEBSITE_URL && process.env.COMPANY_WEBSITE_URL.trim())
-      ? process.env.COMPANY_WEBSITE_URL.trim().replace(/\/$/, '')
-      : (VERCEL_ORIGIN || serverBase);
+    const isLocal = /^localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$/i.test(host);
+    const publicBase = isLocal
+      ? serverBase
+      : ((process.env.COMPANY_WEBSITE_URL && process.env.COMPANY_WEBSITE_URL.trim())
+        ? process.env.COMPANY_WEBSITE_URL.trim().replace(/\/$/, '')
+        : (VERCEL_ORIGIN || serverBase));
+
+    let feedbackToken = '';
+    let feedbackTokenCreatedAt = '';
+    try {
+      const prev = getQuoteMeta(quoteId) || {};
+      feedbackToken = String(prev.feedbackToken || '').trim();
+      feedbackTokenCreatedAt = String(prev.feedbackTokenCreatedAt || '').trim();
+    } catch {}
+    if (!feedbackToken && MONGODB_URI) {
+      try {
+        await initMongo();
+        const doc = await mongoDb.collection('quotes').findOne(
+          { id: quoteId },
+          { projection: { feedbackToken: 1, feedbackTokenCreatedAt: 1 } }
+        );
+        if (doc && doc.feedbackToken) {
+          feedbackToken = String(doc.feedbackToken || '').trim();
+          feedbackTokenCreatedAt = String(doc.feedbackTokenCreatedAt || '').trim();
+        }
+      } catch {}
+    }
+    if (!feedbackToken) {
+      feedbackToken = crypto.randomBytes(16).toString('hex');
+      feedbackTokenCreatedAt = new Date().toISOString();
+    }
+
+    const feedbackInterestedUrl = `${publicBase}/api/public/quote-feedback?quoteId=${encodeURIComponent(quoteId)}&token=${encodeURIComponent(feedbackToken)}&interest=1&callback=1`;
+    const feedbackNotInterestedUrl = `${publicBase}/api/public/quote-feedback?quoteId=${encodeURIComponent(quoteId)}&token=${encodeURIComponent(feedbackToken)}&interest=0&callback=0`;
 
     const mailer = new MailerSend({ apiKey });
     const emailParams = new EmailParams()
@@ -1762,6 +2089,10 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
         supportEmail: fromEmail,
         logoUrl: `${origin}/images/logo.png`,
         trackingUrl: `${publicBase}/api/track/open/${encodeURIComponent(quoteId)}.gif?rid=${encodeURIComponent(replyId)}`,
+        feedback: {
+          interestedUrl: feedbackInterestedUrl,
+          notInterestedUrl: feedbackNotInterestedUrl,
+        },
         details: {
           price: extras?.price,
           mileageKm: extras?.mileageKm,
@@ -1777,7 +2108,15 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
           defectObserved: extras?.defectObserved,
         }
       }))
-      .setText([message, '', `Référence: ${quoteId}`].join('\n'))
+      .setText([
+        message,
+        '',
+        `Référence: ${quoteId}`,
+        '',
+        'Réponse en 1 clic :',
+        `- Intéressé + rappel : ${feedbackInterestedUrl}`,
+        `- Pas intéressé : ${feedbackNotInterestedUrl}`,
+      ].join('\n'))
       .setReplyTo(new Sender(fromEmail, fromName));
 
     // Conversion des pièces jointes: data URL (ou base64 direct) -> Attachment
@@ -1844,6 +2183,8 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
               followUpAt,
               lastReplyAt: nowIso,
               lastReplyId: replyId,
+              feedbackToken,
+              feedbackTokenCreatedAt,
               updatedAt: nowIso,
             },
             $push: { responses: replyDoc },
@@ -1861,6 +2202,8 @@ app.post('/api/devis/:id/reponse', async (req, res) => {
         lastReplyAt: nowIso,
         lastReplyId: replyId,
         followUpAt,
+        feedbackToken,
+        feedbackTokenCreatedAt,
       });
     } catch (e) {
       console.error('[admin reply] local meta write error', e?.message || e);

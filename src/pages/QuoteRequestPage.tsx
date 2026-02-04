@@ -29,17 +29,22 @@ import * as Yup from 'yup';
 import { addQuote } from '../utils/quotesStore';
 import { useLocation } from 'react-router-dom';
 
+const isValidPhone = (value?: string | null) => {
+  if (!value) return false;
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < 8 || digits.length > 16) return false;
+  return /^[0-9+() \-.\s]+$/.test(value);
+};
+
 const QuoteSchema = Yup.object({
   name: Yup.string(),
   email: Yup.string().email('Email invalide'),
-  phone: Yup.string(),
+  phone: Yup.string()
+    .required('Téléphone requis')
+    .test('phone-format', 'Numéro de téléphone invalide', (value) => isValidPhone(value)),
   vehicleId: Yup.string().required('Plaque, N° châssis ou code moteur requis'),
   message: Yup.string().max(1000, '1000 caractères maximum'),
   enginePackage: Yup.string().required('Sélectionnez une option')
-}).test('contact-required', 'Téléphone ou email requis', (values: any) => {
-  const phone = values?.phone?.trim();
-  const email = values?.email?.trim();
-  return Boolean(phone || email);
 });
 
 const QuoteRequestPage: React.FC = () => {
@@ -306,41 +311,48 @@ const QuoteRequestPage: React.FC = () => {
                           />
                         </Stack>
 
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                          <TextField
-                            fullWidth
-                            label="Téléphone"
-                            name="phone"
-                            value={values.phone}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            error={touched.phone && Boolean(errors.phone)}
-                            helperText={touched.phone && errors.phone}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <PhoneIcon sx={{ color: 'primary.main' }} />
-                                </InputAdornment>
-                              )
-                            }}
-                          />
-                          <TextField
-                            fullWidth
-                            label="Plaque FR, N° châssis ou code moteur"
-                            name="vehicleId"
-                            value={values.vehicleId}
-                            onChange={handleChange}
-                            onBlur={handleBlur}
-                            error={touched.vehicleId && Boolean(errors.vehicleId)}
-                            helperText={touched.vehicleId && errors.vehicleId}
-                            InputProps={{
-                              startAdornment: (
-                                <InputAdornment position="start">
-                                  <DirectionsCarIcon sx={{ color: 'primary.main' }} />
-                                </InputAdornment>
-                              )
-                            }}
-                          />
+                        <Stack direction="column" spacing={2}>
+                          <Box sx={{ flex: 1 }}>
+                            <TextField
+                              fullWidth
+                              label="Téléphone"
+                              name="phone"
+                              value={values.phone}
+                              onChange={handleChange}
+                              onBlur={handleBlur}
+                              error={touched.phone && Boolean(errors.phone)}
+                              helperText={touched.phone && errors.phone}
+                              InputProps={{
+                                startAdornment: (
+                                  <InputAdornment position="start">
+                                    <PhoneIcon sx={{ color: 'primary.main' }} />
+                                  </InputAdornment>
+                                )
+                              }}
+                            />
+                            <Typography variant="caption" color="text.secondary">
+                              Nous ne vous rappellerons que si vous le demandez.
+                            </Typography>
+                          </Box>
+                          <Box>
+                            <TextField
+                              fullWidth
+                              label="Plaque FR, N° châssis ou code moteur"
+                              name="vehicleId"
+                              value={values.vehicleId}
+                              onChange={handleChange}
+                              onBlur={handleBlur}
+                              error={touched.vehicleId && Boolean(errors.vehicleId)}
+                              helperText={touched.vehicleId && errors.vehicleId}
+                              InputProps={{
+                                startAdornment: (
+                                  <InputAdornment position="start">
+                                    <DirectionsCarIcon sx={{ color: 'primary.main' }} />
+                                  </InputAdornment>
+                                )
+                              }}
+                            />
+                          </Box>
                         </Stack>
 
                         <Stack spacing={2}>

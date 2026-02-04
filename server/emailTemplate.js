@@ -361,6 +361,7 @@ export const buildReplyEmailHtmlV2 = ({
   details = undefined,
   companyInfo = undefined,
   trackingUrl = '',
+  feedback = undefined,
 } = {}) => {
   const safe = (v) => escapeHtml(String(v ?? ''));
   const nl2br = (v) => safe(v).replace(/\n/g, '<br />');
@@ -410,6 +411,11 @@ export const buildReplyEmailHtmlV2 = ({
   const tests = Array.isArray(d.testsPerformed) && d.testsPerformed.length
     ? d.testsPerformed
     : ['Contrôle visuel complet', 'Test de compression', 'Inspection interne par endoscopie'];
+
+  const f = feedback || {};
+  const interestedUrl = String(f.interestedUrl || '').trim();
+  const notInterestedUrl = String(f.notInterestedUrl || '').trim();
+  const hasFeedback = Boolean(interestedUrl || notInterestedUrl);
 
   return `<!doctype html>
 <html lang="fr">
@@ -529,10 +535,29 @@ export const buildReplyEmailHtmlV2 = ({
             ${d.defectObserved ? `<p style=\"margin: 0; font-size: 13px; color: #4b5563;\"><strong>Défaut(s) constaté(s) :</strong> ${nl2br(d.defectObserved)}</p>` : `<p style=\"margin: 0; font-size: 13px; color: #4b5563;\"><strong>Objectif :</strong> fiabilité, transparence, et éviter toute perte de temps ou de main-d’œuvre inutile.</p>`}
           </td>
         </tr>
+        ${hasFeedback ? `
+        <tr>
+          <td style="padding: 14px 26px 6px 26px;">
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #6b7280; margin-bottom: 6px;">Votre décision</div>
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #111827;">Merci de nous indiquer si vous souhaitez avancer. Cela prend 1 seconde.</p>
+            <table role="presentation" border="0" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
+              <tbody>
+                <tr>
+                  <td style="padding: 0 6px 6px 0;" valign="top">
+                    ${interestedUrl ? `<a href="${safe(interestedUrl)}" style="display:block; text-align:center; padding: 12px 14px; border-radius: 12px; background: #16a34a; color: #ffffff; text-decoration: none; font-weight: 800; font-size: 14px;">Je suis intéressé • Merci de me rappeler</a>` : ''}
+                  </td>
+                  <td style="padding: 0 0 6px 6px;" valign="top">
+                    ${notInterestedUrl ? `<a href="${safe(notInterestedUrl)}" style="display:block; text-align:center; padding: 12px 14px; border-radius: 12px; background: #111827; color: #ffffff; text-decoration: none; font-weight: 800; font-size: 14px;">Je ne suis pas intéressé • Ne me rappelez pas</a>` : ''}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>` : ''}
         <!-- CTA / CONTACT -->
         <tr>
           <td style="padding: 20px 26px 10px 26px;">
-            <p style="margin: 0 0 10px 0; font-size: 14px; color: #111827;">Pour valider ce devis ou obtenir des précisions, le plus simple est de nous appeler :</p>
+            <p style="margin: 0 0 10px 0; font-size: 14px; color: #111827;">Si vous le souhaitez vous pouvez directement nous appeler :</p>
             <a style="display: inline-block; padding: 12px 26px; border-radius: 999px; background: #e30613; color: #ffffff; text-decoration: none; font-weight: bold; font-size: 15px;" href="tel:${safePhoneLink}"> ${safe(phone)} </a>
             <p style="margin: 12px 0 0 0; font-size: 12px; color: #6b7280;">Vous pouvez également répondre directement à cet email si vous préférez un échange écrit.</p>
             <p style="margin: 18px 0 4px 0; font-size: 14px; color: #111827;">Cordialement,</p>

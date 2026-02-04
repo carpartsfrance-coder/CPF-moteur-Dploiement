@@ -12,6 +12,7 @@ import RequireAdmin from './components/admin/RequireAdmin';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminQuotes from './pages/admin/AdminQuotes';
 import AdminEnginePages from './pages/admin/AdminEnginePages';
+import AdminEngineReport from './pages/admin/AdminEngineReport';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminBlogPosts from './pages/admin/AdminBlogPosts';
 import AdminRedirects from './pages/admin/AdminRedirects';
@@ -28,6 +29,7 @@ import TestsMoteursPage from './pages/TestsMoteursPage';
 function App() {
   const location = useLocation();
   const isAdmin = location.pathname.startsWith('/admin');
+  const isEngineReportPrint = location.pathname.startsWith('/admin/rapports-moteur') && location.pathname.endsWith('/print');
   const backendBase = (process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001').replace(/\/$/, '');
 
   useEffect(() => {
@@ -93,7 +95,7 @@ function App() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <Header />
+      {!isEngineReportPrint && <Header />}
       <Box component="main" sx={{ flexGrow: 1 }}>
         <Routes>
           {/* Redirection front -> backend pour toutes les pages blog SSR */}
@@ -114,6 +116,8 @@ function App() {
           <Route path="/admin/devis" element={<RequireAdmin><AdminQuotes /></RequireAdmin>} />
           <Route path="/admin/images" element={<RequireAdmin><AdminImages /></RequireAdmin>} />
           <Route path="/admin/engine-pages" element={<RequireAdmin><AdminEnginePages /></RequireAdmin>} />
+          <Route path="/admin/rapports-moteur/:quoteId" element={<RequireAdmin><AdminEngineReport /></RequireAdmin>} />
+          <Route path="/admin/rapports-moteur/:quoteId/print" element={<RequireAdmin><AdminEngineReport /></RequireAdmin>} />
           <Route path="/admin/redirects" element={<RequireAdmin><AdminRedirects /></RequireAdmin>} />
           <Route path="/admin/seo-checks" element={<RequireAdmin><AdminSeoChecks /></RequireAdmin>} />
           <Route path="/admin/blog" element={<RequireAdmin><AdminBlogPosts /></RequireAdmin>} />
@@ -121,8 +125,8 @@ function App() {
           <Route path="/codes-moteur/:slug" element={<EngineCodePage />} />
         </Routes>
       </Box>
-      <Footer />
-      {!isAdmin && <FloatingQuoteButton />}
+      {!isEngineReportPrint && <Footer />}
+      {!isAdmin && !isEngineReportPrint && <FloatingQuoteButton />}
     </Box>
   );
 }

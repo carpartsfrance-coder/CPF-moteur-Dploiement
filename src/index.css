@@ -29,3 +29,251 @@ img, video, iframe {
 .safe-bottom-padding {
   padding-bottom: calc(env(safe-area-inset-bottom) + 8px);
 }
+
+/* Rapport de test moteur - vue impression */
+.engine-report-print {
+  display: none;
+}
+
+.engine-report-print-page {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  background: #ffffff;
+  color: #111827;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 32px 28px;
+  border: 1px solid #e5e7eb;
+}
+
+.engine-report-print-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #111827;
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+}
+
+.engine-report-print-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.engine-report-print-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  text-align: right;
+}
+
+.engine-report-print-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.engine-report-print-logo {
+  height: 32px;
+}
+
+.engine-report-print-company {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.engine-report-print-title {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.engine-report-print-subtitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #6b7280;
+}
+
+.engine-report-print-contact {
+  font-size: 10px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.engine-report-print-accent {
+  width: 120px;
+  height: 52px;
+  background: linear-gradient(135deg, #ef4444 0%, #000000 55%, #ef4444 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 25% 100%);
+}
+
+.engine-report-print-section {
+  padding: 8px 0;
+}
+
+.engine-report-print-info p {
+  margin: 2px 0;
+  font-size: 12px;
+}
+
+.engine-report-print-section-meta {
+  display: flex;
+  gap: 18px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  margin-top: 6px;
+}
+
+.engine-report-print-meta-column {
+  flex: 1;
+  padding: 8px 12px;
+}
+
+.engine-report-print-meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.engine-report-print-meta-column p {
+  margin: 2px 0;
+  font-size: 11px;
+}
+
+.engine-report-print-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #dc2626;
+  margin-bottom: 6px;
+}
+
+.engine-report-print-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.engine-report-print-table th,
+.engine-report-print-table td {
+  border: 1px solid #9ca3af;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.engine-report-print-table th {
+  background: #f3f4f6;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.engine-report-print-table td {
+  font-size: 11px;
+}
+
+.engine-report-print-table tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+.engine-report-print-bottom {
+  display: flex;
+  gap: 16px;
+  padding: 12px 0 4px;
+}
+
+.engine-report-print-bottom-left,
+.engine-report-print-bottom-right {
+  flex: 1;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  padding: 10px 12px;
+}
+
+.engine-report-print-text {
+  font-size: 12px;
+  margin: 4px 0;
+}
+
+.engine-report-print-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 0;
+}
+
+.engine-report-print-footer-bar {
+  flex: 1;
+  height: 4px;
+  background: #ef4444;
+}
+
+.engine-report-print-page-number {
+  margin-left: 12px;
+  font-size: 11px;
+}
+
+.engine-report-print-signatures {
+  display: flex;
+  gap: 24px;
+  padding: 8px 0 4px;
+}
+
+.engine-report-print-signature-block {
+  flex: 1;
+}
+
+.engine-report-print-signature-line {
+  margin-top: 18px;
+  height: 24px;
+  border-bottom: 1px solid #9ca3af;
+}
+
+.engine-report-print-signature-text {
+  font-size: 10px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+@media print {
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    background: #ffffff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* On cache l'éditeur et on affiche uniquement la mise en page du rapport */
+  .engine-report-editor {
+    display: none !important;
+  }
+
+  .engine-report-print {
+    display: block;
+    padding: 0;
+  }
+
+  .engine-report-print-page {
+    width: 100%;
+    min-height: 100vh;
+    box-sizing: border-box;
+    page-break-after: always;
+  }
+}
+

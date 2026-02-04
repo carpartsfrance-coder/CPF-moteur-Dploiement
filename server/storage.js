@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 const DATA_DIR = path.join(__dirname, 'data');
 const FILE = path.join(DATA_DIR, 'replies.json');
+const ENGINE_REPORTS_KEY = '__engineReports';
 
 function ensureStore() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -75,4 +76,40 @@ export function deleteQuoteMeta(quoteId) {
     delete all.__meta[quoteId];
     writeAll(all);
   }
+}
+
+export function saveEngineReport(report) {
+  const all = readAll();
+  if (!all[ENGINE_REPORTS_KEY]) all[ENGINE_REPORTS_KEY] = {};
+  const col = all[ENGINE_REPORTS_KEY];
+  const id = String(report && report.id ? report.id : '').trim();
+  if (!id) {
+    throw new Error('engine report id required');
+  }
+  col[id] = { ...(col[id] || {}), ...report };
+  writeAll(all);
+  return col[id];
+}
+
+export function getEngineReport(id) {
+  const all = readAll();
+  const col = all[ENGINE_REPORTS_KEY] || {};
+  const key = String(id || '').trim();
+  if (!key) return null;
+  return col[key] || null;
+}
+
+export function findEngineReportByQuoteId(quoteId) {
+  const all = readAll();
+  const col = all[ENGINE_REPORTS_KEY] || {};
+  const qid = String(quoteId || '').trim();
+  if (!qid) return null;
+  const values = Object.values(col || {}).filter((r) => r && r.quoteId === qid);
+  if (!values.length) return null;
+  values.sort((a, b) => {
+    const da = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const db = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return db - da;
+  });
+  return values[0];
 }

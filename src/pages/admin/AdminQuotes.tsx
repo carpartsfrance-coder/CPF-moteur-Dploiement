@@ -39,6 +39,8 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 import CloseIcon from '@mui/icons-material/Close';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import AddIcon from '@mui/icons-material/Add';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import { useNavigate } from 'react-router-dom';
 import { getQuotes, updateQuote, deleteQuote, QuoteItem, QuoteResponse, saveQuotes, addResponseToQuote } from '../../utils/quotesStore';
 
 type ReplyChannel = 'email' | 'whatsapp';
@@ -56,7 +58,19 @@ const formatDate = (iso: string) => {
   }
 };
 
+const formatClientFeedback = (fb: QuoteItem['clientFeedback']) => {
+  if (!fb) return null;
+  const interest = !!fb.interest;
+  const callback = !!fb.callback;
+  const label = interest
+    ? (callback ? 'Intéressé • rappel demandé' : 'Intéressé')
+    : 'Pas intéressé';
+  const color = interest ? 'success' : 'error';
+  return { label, color } as const;
+};
+
 const AdminQuotes: React.FC = () => {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [, forceRender] = useReducer((x: number) => x + 1, 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -103,6 +117,21 @@ const AdminQuotes: React.FC = () => {
     mongo: { enabled: boolean; connected: boolean; count: number | null; error: string | null };
     file: { count: number | null };
   };
+
+  const handleOpenEngineReport = (q: QuoteItem) => {
+    navigate(`/admin/rapports-moteur/${encodeURIComponent(q.id)}` as any, {
+      state: {
+        quote: {
+          id: q.id,
+          name: q.name,
+          email: q.email,
+          phone: q.phone,
+          vehicleId: q.vehicleId,
+          message: q.message,
+        },
+      },
+    });
+  };
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
   const [storageLoading, setStorageLoading] = useState(false);
   const isLocalHost = typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
@@ -138,6 +167,7 @@ const AdminQuotes: React.FC = () => {
         followUpAt: m.followUpAt ? String(m.followUpAt) : undefined,
         lastOpenedAt: m.lastOpenedAt ? String(m.lastOpenedAt) : undefined,
         openCount: typeof m.openCount === 'number' ? m.openCount : undefined,
+        clientFeedback: m.clientFeedback ? m.clientFeedback : undefined,
         responses: [],
       }));
       setRemoteQuotes(mapped);
@@ -177,6 +207,7 @@ const AdminQuotes: React.FC = () => {
           followUpAt: m.followUpAt ? String(m.followUpAt) : undefined,
           lastOpenedAt: m.lastOpenedAt ? String(m.lastOpenedAt) : undefined,
           openCount: typeof m.openCount === 'number' ? m.openCount : undefined,
+          clientFeedback: m.clientFeedback ? m.clientFeedback : undefined,
           responses: [],
         }));
         if (!aborted) setRemoteQuotes(mapped);
@@ -867,6 +898,7 @@ const AdminQuotes: React.FC = () => {
                   <TableCell>Véhicule</TableCell>
                   <TableCell>Message</TableCell>
                   <TableCell>Canal</TableCell>
+                  <TableCell>Réponse client</TableCell>
                   <TableCell
                     sx={{
                       position: 'sticky',
@@ -917,6 +949,20 @@ const AdminQuotes: React.FC = () => {
                   <TableCell>
                     <Chip size="small" label={q.channel || 'n/a'} color={q.channel === 'api' ? 'success' : q.channel === 'whatsapp' ? 'primary' : q.channel === 'email' ? 'secondary' : 'default'} />
                   </TableCell>
+                  <TableCell>
+                    {q.clientFeedback
+                      ? (() => {
+                        const meta = formatClientFeedback(q.clientFeedback);
+                        if (!meta) return <span style={{ color: '#9ca3af' }}>—</span>;
+                        return (
+                          <Stack spacing={0.25} sx={{ minWidth: 180 }}>
+                            <Chip size="small" label={meta.label} color={meta.color as any} />
+                            <span style={{ color: '#64748b', fontSize: 12 }}>Répondu: {formatDate(q.clientFeedback.respondedAt)}</span>
+                          </Stack>
+                        );
+                      })()
+                      : <span style={{ color: '#9ca3af' }}>—</span>}
+                  </TableCell>
                   <TableCell
                     sx={{
                       position: 'sticky',
@@ -961,6 +1007,11 @@ const AdminQuotes: React.FC = () => {
                     }}
                   >
                     <Stack direction="row" spacing={0.5} justifyContent="flex-end" flexWrap="wrap">
+                      <Tooltip title="Rapport moteur">
+                        <IconButton size="small" color="secondary" onClick={() => handleOpenEngineReport(q)}>
+                          <AssessmentIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Copier">
                         <IconButton size="small" onClick={() => handleCopy(q)}>
                           <ContentCopyIcon fontSize="small" />
@@ -982,7 +1033,7 @@ const AdminQuotes: React.FC = () => {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8}>
+                  <TableCell colSpan={10}>
                     <Typography variant="body2" color="text.secondary">Aucun devis pour le moment.</Typography>
                   </TableCell>
                 </TableRow>

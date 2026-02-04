@@ -45,6 +45,12 @@ export type QuoteItem = {
   followUpAt?: string;
   lastOpenedAt?: string;
   openCount?: number;
+  clientFeedback?: {
+    interest: boolean;
+    callback: boolean;
+    respondedAt: string;
+    source?: string;
+  };
 };
 
 const KEY = 'cpf_quotes_v1';

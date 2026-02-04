@@ -138,10 +138,19 @@ const LinkButton = ({ children, ...props }: LinkButtonProps) => {
   );
 };
 
+const isValidPhone = (value?: string | null) => {
+  if (!value) return false;
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < 8 || digits.length > 16) return false;
+  return /^[0-9+() \-.\s]+$/.test(value);
+};
+
 const validationSchema = yup.object({
   name: yup.string().required('Votre nom est requis'),
   email: yup.string().email('Email invalide').required("L'email est requis"),
-  phone: yup.string().required('Le téléphone est requis'),
+  phone: yup.string()
+    .required('Le téléphone est requis')
+    .test('phone-format', 'Numéro de téléphone invalide', (value) => isValidPhone(value)),
   vehicleId: yup.string().required('Plaque, N° châssis ou code moteur requis'),
   message: yup.string().max(1000, '1000 caractères maximum'),
   enginePackage: yup.string().required('Sélectionnez une option')

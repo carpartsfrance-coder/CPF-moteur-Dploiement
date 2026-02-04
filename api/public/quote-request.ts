@@ -19,7 +19,7 @@ export default async function handler(req: any, res: any) {
     const source = String(b.source || '').trim();
     const createdAt = String(b.createdAt || new Date().toISOString());
 
-    if (!vehicleId || (!phone && !email)) {
+    if (!vehicleId || !phone) {
       return res.status(400).json({ ok: false, error: 'invalid_payload' });
     }
 
