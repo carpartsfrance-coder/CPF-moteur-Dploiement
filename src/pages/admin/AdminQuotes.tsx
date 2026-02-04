@@ -308,7 +308,7 @@ const AdminQuotes: React.FC = () => {
   // Helpers pour calcul auto du prix de vente
   const parseEuro = (s: string) => {
     try {
-      const cleaned = String(s).replace(/[^0-9,\.]/g, '').replace(',', '.');
+      const cleaned = String(s).replace(/[^0-9,.]/g, '').replace(',', '.');
       const n = Number(cleaned);
       return Number.isFinite(n) ? n : NaN;
     } catch { return NaN; }

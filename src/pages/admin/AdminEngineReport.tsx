@@ -119,7 +119,7 @@ const AdminEngineReport: React.FC = () => {
     if (!quote && locationState.state?.quote) {
       setQuote(locationState.state.quote);
     }
-  }, [location.state, quote]);
+  }, [locationState.state, quote]);
 
   useEffect(() => {
     if (!quoteId) return;

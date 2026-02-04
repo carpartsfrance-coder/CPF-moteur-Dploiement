@@ -89,13 +89,6 @@ const AboutPage: React.FC = () => {
     'Support humain joignable 6 j/7 par téléphone, WhatsApp ou email'
   ];
 
-  const partners = [
-    { name: 'UPS', alt: 'UPS', img: '/partners/ups.svg', color: '#6b5b3e', bg: '#f7f3ec' },
-    { name: 'DB Schenker', alt: 'DB Schenker', img: '/partners/db-schenker.svg', color: '#c70016', bg: '#fff1f3' },
-    { name: 'Mollie', alt: 'Mollie', img: '/partners/mollie.svg', color: '#0A0B0D', bg: '#f4f5f6' },
-    { name: 'Scalapay', alt: 'Scalapay', img: '/partners/scalapay.svg', color: '#ff3b6e', bg: '#fff0f4' },
-  ];
-
   const processSteps = [
     { step: '1', title: 'Analyse & diagnostic', detail: 'Brief complet, codes défaut et usage du véhicule.' },
     { step: '2', title: 'Compatibilité confirmée', detail: 'Références OEM validées, alternatives possibles selon disponibilité.' },
